@@ -87,12 +87,18 @@ export function landing() {
      approve pairing — nothing else. No telemetry without a paired device.</p>`);
 }
 
-export function signupForm(error = "", email = "", next = "") {
+export function signupForm(error = "", email = "", next = "", sso = false) {
+  const googleBtn = sso ? `
+     <a href="/auth/google/start${next ? `?next=${encodeURIComponent(next)}` : ""}">
+       <button class="secondary" style="width:100%">Continue with Google</button>
+     </a>
+     <p class="muted" style="text-align:center">or use email below</p>` : "";
   return layout("Create account",
     `<h1>Create account</h1>
      ${error ? `<p class="error">${esc(error)}</p>` : ""}
      <form method="post" action="/signup" class="card">
        ${next ? `<input type="hidden" name="next" value="${esc(next)}">` : ""}
+       ${googleBtn}
        <label>Email<br><input type="email" name="email" required value="${esc(email)}"></label>
        <label>Password (10+ characters)<br><input type="password" name="password" minlength="10" required></label>
        <button>Create account</button>
@@ -100,12 +106,18 @@ export function signupForm(error = "", email = "", next = "") {
      <p class="muted">Have one? <a href="/login">Sign in</a>.</p>`);
 }
 
-export function loginForm(error = "", next = "") {
+export function loginForm(error = "", next = "", sso = false) {
+  const googleBtn = sso ? `
+     <a href="/auth/google/start${next ? `?next=${encodeURIComponent(next)}` : ""}">
+       <button class="secondary" style="width:100%">Continue with Google</button>
+     </a>
+     <p class="muted" style="text-align:center">or use email below</p>` : "";
   return layout("Sign in",
     `<h1>Sign in</h1>
      ${error ? `<p class="error">${esc(error)}</p>` : ""}
      <form method="post" action="/login" class="card">
        ${next ? `<input type="hidden" name="next" value="${esc(next)}">` : ""}
+       ${googleBtn}
        <label>Email<br><input type="email" name="email" required></label>
        <label>Password<br><input type="password" name="password" required></label>
        <button>Sign in</button>

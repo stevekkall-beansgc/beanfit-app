@@ -15,9 +15,12 @@ npx wrangler d1 create beanfit-app
 
 # 3. Apply schema
 npx wrangler d1 execute beanfit-app --remote --file schema.sql
+npx wrangler d1 execute beanfit-app --remote --file migrations/0002_user_identities.sql
 
-# 4. Set secrets (value from BeanLaunch secret store, never committed)
+# 4. Set secrets (values from BeanLaunch secret store, never committed)
 bl get beanfit-app-session-secret | npx wrangler secret put SESSION_SECRET
+gcloud secrets versions access latest --secret=google-client-id --project=beansgc-beanfit | npx wrangler secret put GOOGLE_CLIENT_ID
+gcloud secrets versions access latest --secret=google-client-secret --project=beansgc-beanfit | npx wrangler secret put GOOGLE_CLIENT_SECRET
 
 # 5. Ship + load catalog
 BEANFIT_SRC=../beanfit/src node scripts/sync_catalog.js --remote
@@ -25,6 +28,9 @@ npx wrangler deploy
 
 # 6. Point the CLI at it (later: becomes the default URL)
 export BEANFIT_SERVER=https://beanfit-app.<your-subdomain>.workers.dev
+
+# 7. Add the workers.dev callback URI to the Google OAuth client
+#    (see GOOGLE-SSO.md step 2) — SSO goes live after that.
 ```
 
 ## Verify

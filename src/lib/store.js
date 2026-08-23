@@ -5,9 +5,25 @@ export function createStore(db) {
     async byEmail(email) {
       return db.prepare("SELECT * FROM users WHERE email = ?").bind(email).first();
     },
+    async byId(id) {
+      return db.prepare("SELECT * FROM users WHERE id = ?").bind(id).first();
+    },
     async create(id, email, pwHash) {
       return db.prepare("INSERT INTO users (id, email, pw_hash) VALUES (?, ?, ?)")
         .bind(id, email, pwHash).run();
+    },
+  };
+
+  const identities = {
+    async find(provider, providerUid) {
+      return db.prepare(
+        "SELECT i.*, u.email AS user_email FROM user_identities i JOIN users u ON u.id = i.user_id WHERE provider = ? AND provider_uid = ?"
+      ).bind(provider, providerUid).first();
+    },
+    async create(provider, providerUid, userId, emailAtLink) {
+      return db.prepare(
+        "INSERT INTO user_identities (provider, provider_uid, user_id, email_at_link) VALUES (?, ?, ?, ?)"
+      ).bind(provider, providerUid, userId, emailAtLink).run();
     },
   };
 
