@@ -1,0 +1,16 @@
+{
+  "$schema": "https://unpkg.com/wrangler/config-schema.json",
+  "name": "beanfit-app",
+  "main": "src/index.js",
+  "compatibility_date": "2026-08-01",
+  "vars": {
+    "ENVIRONMENT": "dev"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "beanfit-app",
+      "database_id": "local-dev-placeholder"
+    }
+  ]
+}
