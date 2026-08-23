@@ -24,14 +24,17 @@ export const GOOGLE_AUTH = "https://accounts.google.com/o/oauth2/v2/auth";
 export const GOOGLE_TOKEN = "https://oauth2.googleapis.com/token";
 
 // Signed, stateless state parameter: carries nonce + optional redirect path.
+// Returns { state, nonce } — the nonce MUST also be sent as the `nonce`
+// authorization parameter so Google echoes it back inside the id_token.
 export async function mintState(secret, next = "", ttlSecs = 600) {
+  const nonce = crypto.randomUUID();
   const payload = b64urlEncode({
-    n: crypto.randomUUID(),
+    n: nonce,
     x: Math.floor(Date.now() / 1000) + ttlSecs,
     p: typeof next === "string" && next.startsWith("/") && !next.startsWith("//") ? next : "",
   });
   const { hmacHex } = await import("./crypto.js");
-  return `${payload}.${await hmacHex(secret, `state:${payload}`)}`;
+  return { state: `${payload}.${await hmacHex(secret, `state:${payload}`)}`, nonce };
 }
 
 export async function verifyState(secret, state) {
@@ -50,13 +53,21 @@ export async function verifyState(secret, state) {
 }
 
 export function validateIdTokenClaims(claims, clientId, nonce) {
-  const okIss = ["https://accounts.google.com", "accounts.google.com"].includes(claims.iss);
-  const okAud = claims.aud === clientId;
-  const okExp = Number(claims.exp) > Math.floor(Date.now() / 1000);
-  const okNonce = typeof nonce === "string" && claims.nonce === nonce;
-  const okEmail = typeof claims.email === "string" &&
-    (claims.email_verified === true || claims.email_verified === undefined);
-  if (!(okIss && okAud && okExp && okNonce && okEmail)) return null;
+  return claimsFailureReason(claims, clientId, nonce) === null;
+}
+
+export function claimsFailureReason(claims, clientId, nonce) {
+  if (!["https://accounts.google.com", "accounts.google.com"].includes(claims.iss))
+    return "bad issuer";
+  if (claims.aud !== clientId) return "audience mismatch";
+  if (!(Number(claims.exp) > Math.floor(Date.now() / 1000))) return "expired";
+  if (typeof nonce !== "string" || claims.nonce !== nonce) return "nonce mismatch";
+  if (typeof claims.email !== "string") return "missing email";
+  if (claims.email_verified === false) return "email not verified";
+  return null;
+}
+
+export function claimsToIdentity(claims) {
   return {
     provider: "google",
     uid: String(claims.sub),

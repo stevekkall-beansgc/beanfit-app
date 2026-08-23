@@ -1,7 +1,7 @@
 import { html, parseCookies, sessionCookie, clearSessionCookie, redirect } from "../lib/http.js";
 import { randomHex, sha256Hex, hmacHex, hashPassword, verifyPassword, timingSafeEqual } from "../lib/crypto.js";
 import {
-  mintState, verifyState, validateIdTokenClaims, exchangeCode,
+  mintState, verifyState, claimsFailureReason, claimsToIdentity, exchangeCode,
 } from "../lib/oauth.js";
 import { createStore } from "../lib/store.js";
 import { signupForm, loginForm } from "../pages.js";
@@ -55,13 +55,14 @@ export function makeAuthHandlers(env) {
         503);
     }
     const origin = new URL(ctx.request.url).origin;
-    const state = await mintState(env.SESSION_SECRET, safeNext(ctx.query.get("next")));
+    const { state, nonce } = await mintState(env.SESSION_SECRET, safeNext(ctx.query.get("next")));
     const params = new URLSearchParams({
       client_id: env.GOOGLE_CLIENT_ID,
       redirect_uri: `${origin}/auth/google/callback`,
       response_type: "code",
       scope: "openid email profile",
       state,
+      nonce,
       prompt: "select_account",
     });
     return redirect(
@@ -100,8 +101,12 @@ export function makeAuthHandlers(env) {
     let claims;
     try { claims = JSON.parse(atob(body.id_token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))); }
     catch { return html(loginForm("Invalid token from Google.")); }
-    const identity = validateIdTokenClaims(claims, env.GOOGLE_CLIENT_ID, verified.nonce);
-    if (!identity) return html(loginForm("Google account claims failed validation."));
+    const reason = claimsFailureReason(claims, env.GOOGLE_CLIENT_ID, verified.nonce);
+    if (reason) {
+      console.error("google claims rejected:", reason);
+      return html(loginForm("Google sign-in failed validation. Try again."));
+    }
+    const identity = claimsToIdentity(claims);
 
     // 1. Known identity → straight in.
     const known = await store.identities.find(identity.provider, identity.uid);
