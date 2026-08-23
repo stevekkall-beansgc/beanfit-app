@@ -30,12 +30,21 @@ button { background: #14532d; color: #fff; border: none; cursor: pointer;
          font-weight: 600; width: auto; padding: 10px 22px; }
 button.secondary { background: #e5e7eb; color: #374151; }
 .error { color: #b91c1c; margin: 4px 0 10px; }
+.divider { display: flex; align-items: center; gap: 10px;
+          color: #667085; font-size: .85rem; margin: 14px 0; }
+.divider::before, .divider::after { content: ""; flex: 1; height: 1px;
+          background: #d5dae0; }
+a.btn { display: block; text-align: center; text-decoration: none;
+        font-size: 1rem; padding: 9px 12px; margin: 4px 0 12px; border-radius: 8px;
+        border: 1px solid #cfd6de; color: #1a1d21; background: #fff; }
+a.btn:hover { background: #f0f2f5; }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
 .pair-code { font-size: 2rem; letter-spacing: .35em; font-family: ui-monospace, monospace; }
 @media (prefers-color-scheme: dark) {
   body { background: #0f1216; color: #e6e8eb; }
   .card { background: #171c22; border-color: #232a33; }
   th, td { border-color: #232a33; } code, pre { background: #1d242c; }
+  .divider::before, .divider::after { background: #2a323c; }
 }
 `;
 
@@ -89,39 +98,42 @@ export function landing() {
 
 export function signupForm(error = "", email = "", next = "", sso = false) {
   const googleBtn = sso ? `
-     <a href="/auth/google/start${next ? `?next=${encodeURIComponent(next)}` : ""}">
-       <button class="secondary" style="width:100%">Continue with Google</button>
-     </a>
-     <p class="muted" style="text-align:center">or use email below</p>` : "";
+       <a class="btn" href="/auth/google/start${next ? `?next=${encodeURIComponent(next)}` : ""}">Continue with Google</a>
+       <div class="divider">or sign up with email</div>
+       <p class="muted">Prefer a password? Set one below instead.</p>` : "";
   return layout("Create account",
-    `<h1>Create account</h1>
+    `<h1>Create your free account</h1>
      ${error ? `<p class="error">${esc(error)}</p>` : ""}
-     <form method="post" action="/signup" class="card">
+     <div class="card">
+      ${googleBtn}
+      <form method="post" action="/signup">
        ${next ? `<input type="hidden" name="next" value="${esc(next)}">` : ""}
-       ${googleBtn}
-       <label>Email<br><input type="email" name="email" required value="${esc(email)}"></label>
-       <label>Password (10+ characters)<br><input type="password" name="password" minlength="10" required></label>
+       <label>Email<br><input type="email" name="email" required value="${esc(email)}" autocomplete="email"></label>
+       <label>Password<br><input type="password" name="password" minlength="10" required autocomplete="new-password"></label>
        <button>Create account</button>
-     </form>
-     <p class="muted">Have one? <a href="/login">Sign in</a>.</p>`);
+      </form>
+     </div>
+     <p class="muted">Already registered? <a href="/login${next ? `?next=${encodeURIComponent(next)}` : ""}">Sign in</a>.</p>`);
 }
 
 export function loginForm(error = "", next = "", sso = false) {
   const googleBtn = sso ? `
-     <a href="/auth/google/start${next ? `?next=${encodeURIComponent(next)}` : ""}">
-       <button class="secondary" style="width:100%">Continue with Google</button>
-     </a>
-     <p class="muted" style="text-align:center">or use email below</p>` : "";
+       <a class="btn" href="/auth/google/start${next ? `?next=${encodeURIComponent(next)}` : ""}">Continue with Google</a>
+       <div class="divider">or continue with email</div>` : "";
   return layout("Sign in",
     `<h1>Sign in</h1>
      ${error ? `<p class="error">${esc(error)}</p>` : ""}
-     <form method="post" action="/login" class="card">
+     <div class="card">
+      ${googleBtn}
+      <form method="post" action="/login">
        ${next ? `<input type="hidden" name="next" value="${esc(next)}">` : ""}
-       ${googleBtn}
-       <label>Email<br><input type="email" name="email" required></label>
-       <label>Password<br><input type="password" name="password" required></label>
+       <label>Email<br><input type="email" name="email" required autocomplete="email"></label>
+       <label>Password<br><input type="password" name="password" required autocomplete="current-password"></label>
        <button>Sign in</button>
-     </form>`);
+      </form>
+      ${sso ? `<p class="muted">Signed up with Google? You don't have a password — use the button above.</p>` : ""}
+     </div>
+     <p class="muted">New here? <a href="/signup${next ? `?next=${encodeURIComponent(next)}` : ""}">Create an account</a>.</p>`);
 }
 
 export function dashboard(user, devices) {
