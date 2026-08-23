@@ -7,6 +7,7 @@ BASE="${1:-http://127.0.0.1:8787}"
 BEANFIT_SRC="${BEANFIT_SRC:-$HOME/Desktop/beanfit/src}"
 JAR="$(mktemp)"
 HOME_DIR="$(mktemp -d)"
+REGLOG="$(mktemp)"
 EMAIL="e2e-$(date +%s)@test.local"
 
 echo "== 1. signup $EMAIL"
@@ -16,13 +17,15 @@ curl -s -o /dev/null -w "signup: %{http_code} -> %{redirect_url}\n" \
 
 echo "== 2. start beanfit register (isolated HOME)"
 HOME="$HOME_DIR" PYTHONPATH="$BEANFIT_SRC" \
-  python3 -m beanfit register --server "$BASE" --use-case coding > /tmp/e2e-register.log 2>&1 &
+  python3 -m beanfit register --server "$BASE" --use-case coding > "$REGLOG" 2>&1 &
+REGLOG_FILE="$REGLOG"
 REG_PID=$!
+REGLOG="${REGLOG:-$(mktemp)}"
 sleep 6
 
-CODE=$(grep -Eo 'Pairing code: [0-9A-Z]{8}' /tmp/e2e-register.log | awk '{print $3}')
+CODE=$(grep -Eo 'Pairing code: [0-9A-Z]{8}' "$REGLOG" | awk '{print $3}')
 echo "pairing code from CLI: ${CODE:-MISSING}"
-[ -n "$CODE" ] || { echo FAIL; cat /tmp/e2e-register.log; exit 1; }
+[ -n "$CODE" ] || { echo FAIL; cat "$REGLOG"; exit 1; }
 
 echo "== 3. confirm page renders device"
 CONFIRM=$(curl -s -b "$JAR" "$BASE/pair/$CODE")
@@ -36,7 +39,7 @@ curl -s -b "$JAR" -d "csrf=$CSRF" -d "label=E2E Test Mac" \
 
 wait $REG_PID && echo "== 5. CLI exited 0 (approved)"
 
-grep -q "Approved" /tmp/e2e-register.log
+grep -q "Approved" "$REGLOG"
 HOME="$HOME_DIR" python3 -c "
 import json, glob
 path = glob.glob('$HOME_DIR/.config/beanfit/device.json')

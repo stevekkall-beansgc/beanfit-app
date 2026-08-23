@@ -5,7 +5,7 @@ import { hashPassword, verifyPassword, pairingCode, timingSafeEqual, randomHex }
 
 test("password hash round-trips", async () => {
   const hash = await hashPassword("correct horse battery");
-  assert.match(hash, /^pbkdf2\$120000\$/);
+  assert.match(hash, /^pbkdf2\$100000\$/);
   assert.equal(await verifyPassword("correct horse battery", hash), true);
   assert.equal(await verifyPassword("wrong password", hash), false);
 });

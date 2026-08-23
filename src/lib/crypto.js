@@ -20,8 +20,9 @@ export async function hmacHex(secret, message) {
   return [...new Uint8Array(sig)].map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
-// PBKDF2-SHA256, 120k iterations — Workers CPU budget is fine for login-rate traffic.
-const PBKDF2_ITERS = 120000;
+// PBKDF2-SHA256. 100k = the maximum Workers supports; verifyPassword reads
+// the iteration count from each stored hash so bumps stay backward-compatible.
+const PBKDF2_ITERS = 100000;
 
 export async function hashPassword(password) {
   const salt = new Uint8Array(16);

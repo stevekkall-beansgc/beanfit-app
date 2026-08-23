@@ -4,13 +4,13 @@
   "main": "src/index.js",
   "compatibility_date": "2026-08-01",
   "vars": {
-    "ENVIRONMENT": "dev"
+    "ENVIRONMENT": "production"
   },
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "beanfit-app",
-      "database_id": "local-dev-placeholder"
+      "database_id": "e857a87e-b515-4f58-88eb-44f2d650e97e"
     }
   ]
 }
