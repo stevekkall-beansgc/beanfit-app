@@ -12,6 +12,17 @@ export function createStore(db) {
       return db.prepare("INSERT INTO users (id, email, pw_hash) VALUES (?, ?, ?)")
         .bind(id, email, pwHash).run();
     },
+    // Atomic user+identity creation: D1 batch = implicit transaction, so a
+    // passwordless account can never exist without its identity row.
+    async createWithIdentity(user, identity) {
+      return db.batch([
+        db.prepare("INSERT INTO users (id, email, pw_hash) VALUES (?, ?, ?)")
+          .bind(user.id, user.email, user.pwHash),
+        db.prepare(
+          "INSERT INTO user_identities (provider, provider_uid, user_id, email_at_link) VALUES (?, ?, ?, ?)"
+        ).bind(identity.provider, identity.providerUid, identity.userId, identity.emailAtLink),
+      ]);
+    },
   };
 
   const identities = {
@@ -60,6 +71,15 @@ export function createStore(db) {
     async byPairCode(code) {
       return db.prepare("SELECT * FROM devices WHERE pair_code = ?").bind(code).first();
     },
+    // The whole pairing-liveness rule in one place: pending AND not expired.
+    // IS NOT NULL matters — JS callers treated a missing expiry as expired,
+    // so SQL must not make such rows immortal.
+    async pendingByCode(code, nowUnix) {
+      return db.prepare(
+        "SELECT * FROM devices WHERE pair_code = ? AND status = 'pending'" +
+        " AND pair_expires_at IS NOT NULL AND pair_expires_at > ?"
+      ).bind(code, nowUnix).first();
+    },
     async listForUser(userId) {
       const { results } = await db.prepare(
         "SELECT id, label, chip, ram_gib, model_budget_gib, bw_source, status, approved_at, created_at FROM devices WHERE user_id = ? AND status != 'pending' ORDER BY created_at DESC"
@@ -70,26 +90,21 @@ export function createStore(db) {
       return db.prepare("SELECT * FROM devices WHERE id = ? AND user_id = ?")
         .bind(id, userId).first();
     },
-    async approve(deviceId, userId, tokenHash) {
+    // Single guarded transition: claim + token land atomically, so the CLI
+    // can never poll an approved row whose token has not been written yet.
+    async approve(deviceId, userId, tokenHash, token) {
       return db.prepare(
-        "UPDATE devices SET user_id = ?, status = 'approved', approved_at = datetime('now'), device_token_hash = ? WHERE id = ? AND status = 'pending'"
-      ).bind(userId, tokenHash, deviceId).run();
+        "UPDATE devices SET user_id = ?, status = 'approved', approved_at = datetime('now')," +
+        " device_token_hash = ?, device_token = ? WHERE id = ? AND status = 'pending'"
+      ).bind(userId, tokenHash, token, deviceId).run();
     },
     async denyPending(deviceId) {
       return db.prepare("UPDATE devices SET status = 'denied' WHERE id = ? AND status = 'pending'")
         .bind(deviceId).run();
     },
-    async setRawToken(deviceId, token) {
-      return db.prepare("UPDATE devices SET device_token = ? WHERE id = ?")
-        .bind(token, deviceId).run();
-    },
     async setStack(deviceId, stackJson) {
       return db.prepare("UPDATE devices SET stack_json = ? WHERE id = ?")
         .bind(stackJson, deviceId).run();
-    },
-    async setLastSeen(deviceId) {
-      return db.prepare("UPDATE devices SET last_seen_at = datetime('now') WHERE id = ?")
-        .bind(deviceId).run();
     },
   };
 

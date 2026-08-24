@@ -102,44 +102,32 @@ export function landing(user = null) {
      approve pairing — nothing else. No telemetry without a paired device.</p>`, user);
 }
 
-export function signupForm(error = "", email = "", next = "", sso = false) {
+// One renderer for both auth forms. Named args — positional optionals let
+// call sites drift silently (seven OAuth error pages once hid the Google
+// button from passwordless users this way).
+export function authForm(mode, { error = "", email = "", next = "", sso = false } = {}) {
+  const signup = mode === "signup";
+  const q = next ? `?next=${encodeURIComponent(next)}` : "";
   const googleBtn = sso ? `
-       <a class="btn" href="/auth/google/start${next ? `?next=${encodeURIComponent(next)}` : ""}">Continue with Google</a>
-       <div class="divider">or sign up with email</div>
-       <p class="muted">Prefer a password? Set one below instead.</p>` : "";
-  return layout("Create account",
-    `<h1>Create your free account</h1>
+       <a class="btn" href="/auth/google/start${q}">Continue with Google</a>
+       <div class="divider">or ${signup ? "sign up" : "continue"} with email</div>
+       ${signup ? `<p class="muted">Prefer a password? Set one below instead.</p>` : ""}` : "";
+  return layout(signup ? "Create account" : "Sign in",
+    `<h1>${signup ? "Create your free account" : "Sign in"}</h1>
      ${error ? `<p class="error">${esc(error)}</p>` : ""}
      <div class="card">
       ${googleBtn}
-      <form method="post" action="/signup">
+      <form method="post" action="${signup ? "/signup" : "/login"}">
        ${next ? `<input type="hidden" name="next" value="${esc(next)}">` : ""}
-       <label>Email<br><input type="email" name="email" required value="${esc(email)}" autocomplete="email"></label>
-       <label>Password<br><input type="password" name="password" minlength="10" required autocomplete="new-password"></label>
-       <button>Create account</button>
+       <label>Email<br><input type="email" name="email" required${signup ? ` value="${esc(email)}"` : ""} autocomplete="email"></label>
+       <label>Password<br><input type="password" name="password" ${signup ? `minlength="10" required autocomplete="new-password"` : `required autocomplete="current-password"`}></label>
+       <button>${signup ? "Create account" : "Sign in"}</button>
       </form>
+      ${!signup && sso ? `<p class="muted">Signed up with Google? You don't have a password — use the button above.</p>` : ""}
      </div>
-     <p class="muted">Already registered? <a href="/login${next ? `?next=${encodeURIComponent(next)}` : ""}">Sign in</a>.</p>`);
-}
-
-export function loginForm(error = "", next = "", sso = false) {
-  const googleBtn = sso ? `
-       <a class="btn" href="/auth/google/start${next ? `?next=${encodeURIComponent(next)}` : ""}">Continue with Google</a>
-       <div class="divider">or continue with email</div>` : "";
-  return layout("Sign in",
-    `<h1>Sign in</h1>
-     ${error ? `<p class="error">${esc(error)}</p>` : ""}
-     <div class="card">
-      ${googleBtn}
-      <form method="post" action="/login">
-       ${next ? `<input type="hidden" name="next" value="${esc(next)}">` : ""}
-       <label>Email<br><input type="email" name="email" required autocomplete="email"></label>
-       <label>Password<br><input type="password" name="password" required autocomplete="current-password"></label>
-       <button>Sign in</button>
-      </form>
-      ${sso ? `<p class="muted">Signed up with Google? You don't have a password — use the button above.</p>` : ""}
-     </div>
-     <p class="muted">New here? <a href="/signup${next ? `?next=${encodeURIComponent(next)}` : ""}">Create an account</a>.</p>`);
+     <p class="muted">${signup
+       ? `Already registered? <a href="/login${q}">Sign in</a>.`
+       : `New here? <a href="/signup${q}">Create an account</a>.`}</p>`);
 }
 
 export function dashboard(user, devices) {

@@ -4,7 +4,7 @@ import {
   mintState, verifyState, claimsFailureReason, claimsToIdentity, exchangeCode,
 } from "../lib/oauth.js";
 import { createStore } from "../lib/store.js";
-import { signupForm, loginForm, logoutConfirm } from "../pages.js";
+import { authForm, logoutConfirm } from "../pages.js";
 
 export function makeAuthHandlers(env) {
   const store = createStore(env.DB);
@@ -76,18 +76,18 @@ export function makeAuthHandlers(env) {
     const url = new URL(ctx.request.url);
 
     const err = ctx.query.get("error");
-    if (err) return html(loginForm(`Google sign-in was cancelled (${err}).`));
+    if (err) return html(authForm("login", { error: `Google sign-in was cancelled (${err}).`, sso: ssoConfigured() }));
 
     const cookieState = parseCookies(ctx.request).bf_oauth;
     const queryState = ctx.query.get("state") ?? "";
     if (!cookieState || !timingSafeEqual(cookieState, queryState)) {
-      return html(loginForm("Sign-in could not be verified (state mismatch). Try again."));
+      return html(authForm("login", { error: "Sign-in could not be verified (state mismatch). Try again.", sso: ssoConfigured() }));
     }
     const verified = await verifyState(env.SESSION_SECRET, queryState);
-    if (!verified) return html(loginForm("Sign-in expired. Try again."));
+    if (!verified) return html(authForm("login", { error: "Sign-in expired. Try again.", sso: ssoConfigured() }));
 
     const code = ctx.query.get("code");
-    if (!code) return html(loginForm("Missing authorization code."));
+    if (!code) return html(authForm("login", { error: "Missing authorization code.", sso: ssoConfigured() }));
 
     const origin = url.origin;
     const { status, body } = await exchangeCode(
@@ -96,15 +96,15 @@ export function makeAuthHandlers(env) {
     );
     if (status !== 200 || typeof body.id_token !== "string") {
       console.error("token exchange failed", status, body.error ?? "");
-      return html(loginForm("Google sign-in failed. Try again."));
+      return html(authForm("login", { error: "Google sign-in failed. Try again.", sso: ssoConfigured() }));
     }
     let claims;
     try { claims = JSON.parse(atob(body.id_token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))); }
-    catch { return html(loginForm("Invalid token from Google.")); }
+    catch { return html(authForm("login", { error: "Invalid token from Google.", sso: ssoConfigured() })); }
     const reason = claimsFailureReason(claims, env.GOOGLE_CLIENT_ID, verified.nonce);
     if (reason) {
       console.error("google claims rejected:", reason);
-      return html(loginForm("Google sign-in failed validation. Try again."));
+      return html(authForm("login", { error: "Google sign-in failed validation. Try again.", sso: ssoConfigured() }));
     }
     const identity = claimsToIdentity(claims);
 
@@ -119,10 +119,24 @@ export function makeAuthHandlers(env) {
       return startSession(byEmail.id, verified.path);
     }
 
-    // 3. New user (passwordless — Google owns the credential).
+    // 3. New user (passwordless — Google owns the credential). One atomic
+    // write; a UNIQUE(email) race re-runs the find/link ladder instead of
+    // leaving a half-created account.
     const userId = randomHex(16);
-    await store.users.create(userId, identity.email, "");
-    await store.identities.create(identity.provider, identity.uid, userId, identity.email);
+    try {
+      await store.users.createWithIdentity(
+        { id: userId, email: identity.email, pwHash: "" },
+        { provider: identity.provider, providerUid: identity.uid, userId, emailAtLink: identity.email },
+      );
+    } catch (e) {
+      const existing = await store.users.byEmail(identity.email);
+      if (!existing) {
+        console.error("signup create failed", e);
+        return html(authForm("login", { error: "Could not create your account. Try again.", sso: ssoConfigured() }));
+      }
+      await store.identities.create(identity.provider, identity.uid, existing.id, identity.email);
+      return startSession(existing.id, verified.path || "/dashboard");
+    }
     return startSession(userId, verified.path || "/dashboard");
   }
 
@@ -134,7 +148,7 @@ export function makeAuthHandlers(env) {
     googleCallback,
 
     async signupPage(ctx) {
-      return html(signupForm("", "", safeNext(ctx.query.get("next")), ssoConfigured()));
+      return html(authForm("signup", { next: safeNext(ctx.query.get("next")), sso: ssoConfigured() }));
     },
 
     async signupSubmit(ctx) {
@@ -142,27 +156,33 @@ export function makeAuthHandlers(env) {
       const email = String(form.email ?? "").trim().toLowerCase();
       const password = String(form.password ?? "");
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))
-        return html(signupForm("Enter a valid email address.", email));
+        return html(authForm("signup", { error: "Enter a valid email address.", email, next: safeNext(form.next), sso: ssoConfigured() }));
       if (password.length < 10)
-        return html(signupForm("Password must be at least 10 characters.", email, safeNext(form.next), ssoConfigured()));
+        return html(authForm("signup", { error: "Password must be at least 10 characters.", email, next: safeNext(form.next), sso: ssoConfigured() }));
       if (await store.users.byEmail(email))
-        return html(signupForm("An account with that email already exists.", email, safeNext(form.next), ssoConfigured()));
+        return html(authForm("signup", { error: "An account with that email already exists.", email, next: safeNext(form.next), sso: ssoConfigured() }));
 
       await store.users.create(randomHex(16), email, await hashPassword(password));
       return startSession((await store.users.byEmail(email)).id, safeNext(form.next));
     },
 
     async loginPage(ctx) {
-      return html(loginForm("", safeNext(ctx.query.get("next")), ssoConfigured()));
+      return html(authForm("login", { next: safeNext(ctx.query.get("next")), sso: ssoConfigured() }));
     },
 
     async loginSubmit(ctx) {
       const email = String(ctx.form.email ?? "").trim().toLowerCase();
       const user = await store.users.byEmail(email);
       if (user && !user.pw_hash)
-        return html(loginForm("This account signs in with Google.", safeNext(ctx.form.next), ssoConfigured()));
+        return html(authForm("login", {
+          error: ssoConfigured()
+            ? "This account signs in with Google."
+            : "Password sign-in isn't set up for this account.",
+          next: safeNext(ctx.form.next),
+          sso: ssoConfigured(),
+        }));
       const ok = user && await verifyPassword(String(ctx.form.password ?? ""), user.pw_hash);
-      if (!ok) return html(loginForm("Wrong email or password.", "", ssoConfigured()));
+      if (!ok) return html(authForm("login", { error: "Wrong email or password.", sso: ssoConfigured() }));
       return startSession(user.id, safeNext(ctx.form.next));
     },
 

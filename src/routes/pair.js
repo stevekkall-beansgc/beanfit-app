@@ -40,37 +40,38 @@ export function makePageHandlers(env, auth) {
       try { body = await ctx.request.json(); } catch { /* defaults */ }
       const rec = await store.recommendations.forDevice(device.id);
       const stack = generateStack(device, {
-        interface: body.interface,
+        surfaces: body.surfaces,
         model_tag: body.model_tag,
       });
       await store.devices.setStack(device.id, JSON.stringify(stack));
       return html(renderStack(stack));
     },
 
-    // /pair            -> lookup form (signed in)
+    // /pair            -> lookup form (signed in; router flag owns the gate)
     // /pair?code=XXXX  -> confirm page
     async pairLookup(ctx) {
-      if (!ctx.user) return redirect("/login");
       const code = String(ctx.query.get("code") ?? "").toUpperCase();
       if (!/^[0-9A-HJKMNP-TV-Z]{8}$/.test(code)) return html(pairLookupForm("", ctx.user));
       return pairConfirmPage(ctx, code);
     },
 
     async pairConfirmRoute(ctx) {
-      if (!ctx.user) return redirect(`/login?next=/pair/${ctx.params.code}`);
       return pairConfirmPage(ctx, ctx.params.code.toUpperCase());
     },
 
     async pairApprove(ctx) {
       const form = ctx.form ?? {};
       if (!await auth.assertCsrf(ctx.request, form)) return html("<p>Invalid request.</p>", 400);
-      const device = await store.devices.byPairCode(ctx.params.code.toUpperCase());
-      if (!device || device.status !== "pending" || expired(device))
+      const device = await store.devices.pendingByCode(
+        ctx.params.code.toUpperCase(), Math.floor(Date.now() / 1000));
+      if (!device)
         return html(pairDone(false, "Invalid or expired code. Run `beanfit register` again.", ctx.user));
       const token = randomHex(24);
-      await store.devices.approve(device.id, ctx.user.id, await sha256Hex(token));
-      await store.devices.setRawToken(device.id, token);
-      await store.devices.setLastSeen(device.id);
+      // approve() carries the status='pending' guard; a concurrent approver
+      // wins the row and ours matches zero rows — never overwrite their token.
+      const res = await store.devices.approve(device.id, ctx.user.id, await sha256Hex(token), token);
+      if (!res?.meta?.changes)
+        return html(pairDone(false, "Invalid or expired code. Run `beanfit register` again.", ctx.user));
       return html(pairDone(true,
         `"${(form.label || device.label).slice(0, 64)}" is registered. Your terminal now has your recommendations.`, ctx.user));
     },
@@ -78,15 +79,16 @@ export function makePageHandlers(env, auth) {
     async pairDeny(ctx) {
       const form = ctx.form ?? {};
       if (!await auth.assertCsrf(ctx.request, form)) return html("<p>Invalid request.</p>", 400);
-      const device = await store.devices.byPairCode(ctx.params.code.toUpperCase());
-      if (device && device.status === "pending") await store.devices.denyPending(device.id);
+      const device = await store.devices.pendingByCode(
+        ctx.params.code.toUpperCase(), Math.floor(Date.now() / 1000));
+      if (device) await store.devices.denyPending(device.id);
       return html(pairDone(false, "Device denied. Nothing was registered.", ctx.user));
     },
   };
 
   async function pairConfirmPage(ctx, code) {
-    const device = await store.devices.byPairCode(code);
-    if (!device || device.status !== "pending" || expired(device))
+    const device = await store.devices.pendingByCode(code, Math.floor(Date.now() / 1000));
+    if (!device)
       return html(pairDone(false, "That pairing code is invalid or expired. Run `beanfit register` again.", ctx.user));
     const rec = await store.recommendations.forDevice(device.id);
     return html(
