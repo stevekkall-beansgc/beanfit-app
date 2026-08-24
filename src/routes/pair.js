@@ -4,8 +4,9 @@ import { createStore } from "../lib/store.js";
 import { sanitizeProfile, sanitizeRanked } from "../lib/fit.js";
 import {
   landing, dashboard, pairConfirm, pairDone,
-  pairLookupForm, deviceDetail,
+  pairLookupForm, deviceDetail, renderStack, stackForm,
 } from "../pages.js";
+import { generateStack } from "../lib/stack.js";
 
 const PAIR_TTL = 15 * 60;
 
@@ -26,7 +27,24 @@ export function makePageHandlers(env, auth) {
       const device = await store.devices.getForUser(ctx.params.id, ctx.user.id);
       if (!device) return new Response("Not found", { status: 404 });
       const rec = await store.recommendations.forDevice(device.id);
-      return html(deviceDetail(device, rec, ctx.user));
+      const stack = device.stack_json ? JSON.parse(device.stack_json) : null;
+      return html(deviceDetail(device, rec, ctx.user, stack));
+    },
+
+    // Generate (and persist) the user's stack. Returns an HTML fragment so
+    // the page can swap it in without a client-side renderer.
+    async generateStackRoute(ctx) {
+      const device = await store.devices.getForUser(ctx.params.id, ctx.user.id);
+      if (!device) return new Response("Not found", { status: 404 });
+      let body = {};
+      try { body = await ctx.request.json(); } catch { /* defaults */ }
+      const rec = await store.recommendations.forDevice(device.id);
+      const stack = generateStack(device, {
+        interface: body.interface,
+        model_tag: body.model_tag,
+      });
+      await store.devices.setStack(device.id, JSON.stringify(stack));
+      return html(renderStack(stack));
     },
 
     // /pair            -> lookup form (signed in)

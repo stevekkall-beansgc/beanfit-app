@@ -2,6 +2,7 @@
 import {
   speedBand, modelInfo, capabilityHeadline, deviceTasks, PROMISES, plainPicks,
 } from "./lib/plain.js";
+import { INTERFACES, modelChoices } from "./lib/stack.js";
 
 const CSS = `
 :root { color-scheme: light dark; }
@@ -305,7 +306,84 @@ export function renderRecs(payloadJson) {
     </details>`;
 }
 
-export function deviceDetail(device, rec, user = null) {
+export function renderStack(stack) {
+  const warnings = (stack.warnings ?? [])
+    .map(w => `<p class="error">${esc(w)}</p>`).join("");
+  const steps = (stack.steps ?? []).map((st, i) => `
+    <li style="margin:10px 0">
+      <strong>${i + 1}. ${esc(st.title)}</strong>
+      ${st.detail ? `<div class="muted">${esc(st.detail)}</div>` : ""}
+      ${st.code ? `<pre>${esc(st.code)}</pre>` : ""}
+    </li>`).join("");
+  const files = (stack.files ?? []).map(f => `
+    <div class="card" style="margin:8px 0">
+      <strong>${esc(f.name)}</strong>
+      <button class="secondary copy-btn" data-code="${esc(f.content)}" style="margin-left:12px;padding:2px 10px;font-size:.8rem">copy</button>
+      <pre>${esc(f.content)}</pre>
+    </div>`).join("");
+  return `<div id="stack-output">
+    ${warnings}
+    <ol style="padding-left:20px">${steps}</ol>
+    ${files}
+    <p class="muted">Generated ${esc((stack.generated_at ?? "").slice(0, 10))} · your choices are saved to this device.</p>
+  </div>`;
+}
+
+export function stackForm(device, rec) {
+  let ranked = [];
+  try { ranked = JSON.parse(rec?.payload_json ?? "{}").ranked ?? []; } catch {}
+  const fits = ranked.filter(r => r.fits);
+  const rest = ranked.filter(r => !r.fits);
+  const defaultTag = fits[0]?.runtime_tag ?? "gemma4:31b";
+  const opt = r => `<option value="${esc(r.runtime_tag)}">${esc(r.name)}</option>`;
+  return `<div class="card" id="stack-config">
+    <h2 style="margin-top:0">Build your setup</h2>
+    <p class="muted">Our suggestion is pre-selected — change anything you like.</p>
+    <p><strong>How do you want to chat?</strong></p>
+    <label style="display:block;margin:6px 0"><input type="radio" name="iface" value="webui" checked style="width:auto;margin-right:8px">
+      ${esc(INTERFACES.webui.label)} <span class="muted">— ${esc(INTERFACES.webui.plain)} (needs Docker, free)</span></label>
+    <label style="display:block;margin:6px 0"><input type="radio" name="iface" value="terminal" style="width:auto;margin-right:8px">
+      ${esc(INTERFACES.terminal.label)} <span class="muted">— ${esc(INTERFACES.terminal.plain)}</span></label>
+    <p style="margin-top:14px"><strong>Which AI?</strong></p>
+    <select name="model" style="width:100%">
+      <optgroup label="Runs great on this machine">${fits.map(opt).join("")}</optgroup>
+      ${rest.length ? `<optgroup label="Ambitious for this machine (will warn)">${rest.map(opt).join("")}</optgroup>` : ""}
+    </select>
+    <button id="gen-stack" style="margin-top:12px">Generate my setup</button>
+    <div id="stack-result" style="margin-top:14px"></div>
+    <script>
+    (function () {
+      var btn = document.getElementById("gen-stack");
+      if (!btn) return;
+      btn.addEventListener("click", function () {
+        var root = document.getElementById("stack-config");
+        var iface = root.querySelector('input[name="iface"]:checked').value;
+        var model = root.querySelector('select[name="model"]').value;
+        btn.disabled = true; btn.textContent = "Building…";
+        fetch("/api/devices/${esc(device.id)}/stack", {
+          method: "POST", headers: { "content-type": "application/json" },
+          body: JSON.stringify({ interface: iface, model_tag: model })
+        }).then(function (r) { return r.text(); }).then(function (frag) {
+          document.getElementById("stack-result").innerHTML = frag;
+          bindCopies();
+          btn.disabled = false; btn.textContent = "Generate my setup";
+        });
+      });
+      function bindCopies() {
+        document.querySelectorAll("#stack-result .copy-btn").forEach(function (b) {
+          b.addEventListener("click", function () {
+            navigator.clipboard.writeText(b.getAttribute("data-code"));
+            b.textContent = "copied";
+          });
+        });
+      }
+      bindCopies();
+    })();
+    </script>
+  </div>`;
+}
+
+export function deviceDetail(device, rec, user = null, stack = null) {
   const cap = capabilityHeadline(device.model_budget_gib);
   return layout(device.label,
     `<h1>${esc(device.label)}</h1>
@@ -316,7 +394,9 @@ export function deviceDetail(device, rec, user = null) {
        <details><summary style="cursor:pointer;display:inline">technical</summary>
        ${esc(device.os ?? "")} · budget ${device.model_budget_gib != null ? esc(String(device.model_budget_gib)) + " GiB" : "not measured"}</details></p>
      ${rec ? renderRecs(rec.payload_json)
-       : `<div class="card muted">No recommendation snapshot stored yet.</div>`}`, user);
+       : `<div class="card muted">No recommendation snapshot stored yet.</div>`}
+     ${stack ? `<div class="card"><h2 style="margin-top:0">Your setup</h2>${renderStack(stack)}</div>` : ""}
+     ${stackForm(device, rec)}`, user);
 }
 
 export function pairDone(ok, message, user = null) {

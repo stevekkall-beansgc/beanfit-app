@@ -83,6 +83,10 @@ export function createStore(db) {
       return db.prepare("UPDATE devices SET device_token = ? WHERE id = ?")
         .bind(token, deviceId).run();
     },
+    async setStack(deviceId, stackJson) {
+      return db.prepare("UPDATE devices SET stack_json = ? WHERE id = ?")
+        .bind(stackJson, deviceId).run();
+    },
     async setLastSeen(deviceId) {
       return db.prepare("UPDATE devices SET last_seen_at = datetime('now') WHERE id = ?")
         .bind(deviceId).run();
