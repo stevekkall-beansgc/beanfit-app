@@ -75,7 +75,7 @@ export function esc(s) {
     c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
-export function landing() {
+export function landing(user = null) {
   return layout("What runs on your machine — and stays optimal",
     `<h1>Your local AI stack, sized for YOUR hardware.</h1>
      <p class="muted">beanfit detects what your device can actually run — model × quant ×
@@ -90,10 +90,12 @@ export function landing() {
          <li><strong>Get your stack</strong>: exact commands to run the best models for your
              machine — plus an alert when something better fits.</li>
        </ol>
-       <p><a href="/signup"><button>Create your account</button></a></p>
+       ${user
+        ? `<p><a href="/dashboard"><button>Go to your devices</button></a></p>`
+        : `<p><a href="/signup"><button>Create your account</button></a></p>`}
      </div>
      <p class="muted">Hardware detection runs locally. We store the profile you see when you
-     approve pairing — nothing else. No telemetry without a paired device.</p>`);
+     approve pairing — nothing else. No telemetry without a paired device.</p>`, user);
 }
 
 export function signupForm(error = "", email = "", next = "", sso = false) {
@@ -141,17 +143,83 @@ export function dashboard(user, devices) {
     <a href="/devices/${esc(d.id)}" style="text-decoration:none;color:inherit">
       <div class="card" style="margin:0">
         <strong>${esc(d.label)}</strong>
-        <div class="muted">${esc(d.chip ?? "")} · ${esc(String(d.ram_gib ?? ""))} GiB</div>
+        <div class="muted">${esc(d.chip ?? "")} · ${d.ram_gib != null ? esc(String(d.ram_gib)) + " GiB" : "RAM unknown"}</div>
+        ${d.bw_source === "browser_estimate" ? `<span class="badge warn">browser estimate</span>` : ""}
       </div>
     </a>`).join("");
+
+  const emptyState = `
+    <div class="card">
+      <h2 style="margin-top:0">Register this device</h2>
+      <p><button id="register-browser" style="width:100%">Register this device (quick estimate)</button></p>
+      <p class="muted" id="register-status">Reads your chip name from the browser — takes one click.
+      Exact numbers (RAM, memory cap) come from the CLI below.</p>
+      <div class="divider">or register with exact numbers</div>
+      <p class="muted">On the machine you want to register:</p>
+      <pre id="cli-cmds">$ pipx install beanfit
+$ beanfit register  <button class="secondary" id="copy-cmds" style="padding:2px 10px;font-size:.8rem">copy</button></pre>
+      <p class="muted">You'll get a pairing code to approve here — same as the quick path,
+      but with exact hardware and full recommendations.</p>
+    </div>
+    <script>
+    (function () {
+      function detectGPU() {
+        try {
+          var c = document.createElement("canvas");
+          var gl = c.getContext("webgl") || c.getContext("experimental-webgl");
+          if (!gl) return null;
+          var ext = gl.getExtension("WEBGL_debug_renderer_info");
+          return ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)
+                     : gl.getParameter(gl.RENDERER);
+        } catch (e) { return null; }
+      }
+      function parseChip(raw) {
+        var m = /Apple M(\d+)(?:\s*(Pro|Max|Ultra))?/.exec(raw || "");
+        return m ? { chip: m[0], family: "M" + m[1], variant: m[2] || "" } : null;
+      }
+      var btn = document.getElementById("register-browser");
+      if (btn) btn.addEventListener("click", function () {
+        var status = document.getElementById("register-status");
+        btn.disabled = true;
+        var raw = detectGPU() || navigator.platform || "unknown device";
+        var chip = parseChip(raw);
+        var ram = navigator.deviceMemory ? Number(navigator.deviceMemory) : null;
+        var payload = {
+          label: chip ? chip.chip : String(raw).slice(0, 40),
+          profile: { hardware: {
+            os: "browser", arch: /Mac/.test(navigator.platform) ? "apple_silicon?" : "other",
+            backend: "unknown",
+            chip: chip ? chip.chip : String(raw).slice(0, 60),
+            family: chip ? chip.family : "",
+            variant: chip ? chip.variant : "",
+            ram_gib: ram, metal_cap_gib: null, model_budget_gib: null,
+            mem_bandwidth_gbs: null, bw_source: "browser_estimate"
+          }}
+        };
+        status.textContent = "Creating pairing request…";
+        fetch("/api/pair/start", {
+          method: "POST", headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload)
+        }).then(function (r) { return r.json(); }).then(function (doc) {
+          if (doc.code) window.location = "/pair/" + doc.code;
+          else { status.textContent = "Could not start pairing (" + (doc.error || "?") + ")"; btn.disabled = false; }
+        }).catch(function () {
+          status.textContent = "Network error — try again."; btn.disabled = false;
+        });
+      });
+      var copy = document.getElementById("copy-cmds");
+      if (copy) copy.addEventListener("click", function () {
+        navigator.clipboard.writeText("pipx install beanfit && beanfit register");
+        copy.textContent = "copied";
+      });
+    })();
+    </script>`;
+
   return layout("Your devices",
     `<h1>Your devices</h1>
-     ${devices.length ? `<div class="grid">${cards}</div>` :
-       `<div class="card"><p>No registered devices yet.</p>
-        <p class="muted">On the machine you want to register:</p>
-        <pre>$ pipx install beanfit
-$ beanfit register</pre>
-        <p class="muted">You'll get a pairing code to approve here.</p></div>`}`);
+     ${devices.length ? `<div class="grid">${cards}</div>` : emptyState}
+     ${devices.length ? `<p class="muted">To register another machine, run
+       <code>pipx install beanfit &amp;&amp; beanfit register</code> on it.</p>` : ""}`, user);
 }
 
 export function pairConfirm(user, device, csrf, recsPayload) {
@@ -175,7 +243,7 @@ export function pairConfirm(user, device, csrf, recsPayload) {
        <label>Nickname<br><input name="label" value="${esc(p.label)}" required maxlength="64"></label>
        <button>Approve &amp; register</button>
        <button class="secondary" formaction="/pair/${esc(p.pair_code)}/deny">Deny</button>
-     </form>`);
+     </form>`, user);
 }
 
 export function renderRecs(payloadJson) {
@@ -200,19 +268,19 @@ export function renderRecs(payloadJson) {
   </div>`;
 }
 
-export function deviceDetail(device, rec) {
+export function deviceDetail(device, rec, user = null) {
   return layout(device.label,
     `<h1>${esc(device.label)}</h1>
      <p class="muted">${esc(device.chip ?? "")} · ${esc(device.os ?? "")} · budget
      ${esc(String(device.model_budget_gib ?? "?"))} GiB · registered ${esc(device.approved_at ?? "")}</p>
      ${rec ? renderRecs(rec.payload_json)
-       : `<div class="card muted">No recommendation snapshot stored yet.</div>`}`);
+       : `<div class="card muted">No recommendation snapshot stored yet.</div>`}`, user);
 }
 
-export function pairDone(ok, message) {
+export function pairDone(ok, message, user = null) {
   return layout(ok ? "Device approved" : "Pairing",
     `<h1>${ok ? "Device approved" : "Not available"}</h1>
-     <div class="card"><p>${esc(message)}</p></div>`);
+     <div class="card"><p>${esc(message)}</p></div>`, user);
 }
 
 export function pairPendingPage(code) {
@@ -226,7 +294,7 @@ export function pairPendingPage(code) {
      </div>`);
 }
 
-export function pairLookupForm(error = "", csrf = "") {
+export function pairLookupForm(error = "", user = null) {
   return layout("Register a device",
     `<h1>Register a device</h1>
      ${error ? `<p class="error">${esc(error)}</p>` : ""}
@@ -236,5 +304,5 @@ export function pairLookupForm(error = "", csrf = "") {
               pattern="[0-9A-HJKMNP-TV-Z-Za-z]{8}" maxlength="8"
               style="text-transform:uppercase;font-family:ui-monospace,monospace;letter-spacing:.3em"></label>
        <button>Find device</button>
-     </form>`);
+     </form>`, user);
 }

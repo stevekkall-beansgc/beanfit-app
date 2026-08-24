@@ -62,7 +62,7 @@ export function createStore(db) {
     },
     async listForUser(userId) {
       const { results } = await db.prepare(
-        "SELECT id, label, chip, ram_gib, status, approved_at, created_at FROM devices WHERE user_id = ? AND status != 'pending' ORDER BY created_at DESC"
+        "SELECT id, label, chip, ram_gib, bw_source, status, approved_at, created_at FROM devices WHERE user_id = ? AND status != 'pending' ORDER BY created_at DESC"
       ).bind(userId).all();
       return results ?? [];
     },

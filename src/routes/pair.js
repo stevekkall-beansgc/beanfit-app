@@ -13,8 +13,8 @@ export function makePageHandlers(env, auth) {
   const store = createStore(env.DB);
 
   return {
-    async landing() {
-      return html(landing());
+    async landing(ctx) {
+      return html(landing(ctx.user));
     },
 
     async dashboard({ user }) {
@@ -26,7 +26,7 @@ export function makePageHandlers(env, auth) {
       const device = await store.devices.getForUser(ctx.params.id, ctx.user.id);
       if (!device) return new Response("Not found", { status: 404 });
       const rec = await store.recommendations.forDevice(device.id);
-      return html(deviceDetail(device, rec));
+      return html(deviceDetail(device, rec, ctx.user));
     },
 
     // /pair            -> lookup form (signed in)
@@ -34,7 +34,7 @@ export function makePageHandlers(env, auth) {
     async pairLookup(ctx) {
       if (!ctx.user) return redirect("/login");
       const code = String(ctx.query.get("code") ?? "").toUpperCase();
-      if (!/^[0-9A-HJKMNP-TV-Z]{8}$/.test(code)) return html(pairLookupForm());
+      if (!/^[0-9A-HJKMNP-TV-Z]{8}$/.test(code)) return html(pairLookupForm("", ctx.user));
       return pairConfirmPage(ctx, code);
     },
 
@@ -48,13 +48,13 @@ export function makePageHandlers(env, auth) {
       if (!await auth.assertCsrf(ctx.request, form)) return html("<p>Invalid request.</p>", 400);
       const device = await store.devices.byPairCode(ctx.params.code.toUpperCase());
       if (!device || device.status !== "pending" || expired(device))
-        return html(pairDone(false, "Invalid or expired code. Run `beanfit register` again."));
+        return html(pairDone(false, "Invalid or expired code. Run `beanfit register` again.", ctx.user));
       const token = randomHex(24);
       await store.devices.approve(device.id, ctx.user.id, await sha256Hex(token));
       await store.devices.setRawToken(device.id, token);
       await store.devices.setLastSeen(device.id);
       return html(pairDone(true,
-        `"${(form.label || device.label).slice(0, 64)}" is registered. Your terminal now has your recommendations.`));
+        `"${(form.label || device.label).slice(0, 64)}" is registered. Your terminal now has your recommendations.`, ctx.user));
     },
 
     async pairDeny(ctx) {
@@ -62,14 +62,14 @@ export function makePageHandlers(env, auth) {
       if (!await auth.assertCsrf(ctx.request, form)) return html("<p>Invalid request.</p>", 400);
       const device = await store.devices.byPairCode(ctx.params.code.toUpperCase());
       if (device && device.status === "pending") await store.devices.denyPending(device.id);
-      return html(pairDone(false, "Device denied. Nothing was registered."));
+      return html(pairDone(false, "Device denied. Nothing was registered.", ctx.user));
     },
   };
 
   async function pairConfirmPage(ctx, code) {
     const device = await store.devices.byPairCode(code);
     if (!device || device.status !== "pending" || expired(device))
-      return html(pairDone(false, "That pairing code is invalid or expired. Run `beanfit register` again."));
+      return html(pairDone(false, "That pairing code is invalid or expired. Run `beanfit register` again.", ctx.user));
     const rec = await store.recommendations.forDevice(device.id);
     return html(
       pairConfirm(ctx.user, device, await auth.csrfFor(ctx.request), rec?.payload_json ?? null),
