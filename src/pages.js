@@ -1,4 +1,7 @@
 // Server-rendered pages. No framework, no client build step.
+import {
+  speedBand, modelInfo, capabilityHeadline, deviceTasks, PROMISES, plainPicks,
+} from "./lib/plain.js";
 
 const CSS = `
 :root { color-scheme: light dark; }
@@ -143,8 +146,9 @@ export function dashboard(user, devices) {
     <a href="/devices/${esc(d.id)}" style="text-decoration:none;color:inherit">
       <div class="card" style="margin:0">
         <strong>${esc(d.label)}</strong>
-        <div class="muted">${esc(d.chip ?? "")} · ${d.ram_gib != null ? esc(String(d.ram_gib)) + " GiB" : "RAM unknown"}</div>
-        ${d.bw_source === "browser_estimate" ? `<span class="badge warn">browser estimate</span>` : ""}
+        <div>${esc(capabilityHeadline(d.model_budget_gib).headline)}</div>
+        <div class="muted">${esc(d.chip ?? "")}
+          ${d.bw_source === "browser_estimate" ? `· <span class="badge warn">estimate</span>` : ""}</div>
       </div>
     </a>`).join("");
 
@@ -224,17 +228,25 @@ $ beanfit register  <button class="secondary" id="copy-cmds" style="padding:2px 
 
 export function pairConfirm(user, device, csrf, recsPayload) {
   const p = device;
+  const cap = capabilityHeadline(p.model_budget_gib);
   return layout("Approve device",
     `<h1>Pair this device?</h1>
      <div class="card">
+       <h2 style="margin-top:0">${esc(cap.headline)}</h2>
+       <ul style="margin:6px 0">${cap.tasks.map(t => `<li>${esc(t)}</li>`).join("")}</ul>
+       <p class="muted" style="margin:8px 0 0">${esc(cap.detail)} And:</p>
+       <ul class="muted" style="margin:4px 0 0">${PROMISES.map(x => `<li>${esc(x)}</li>`).join("")}</ul>
+     </div>
+     <details class="card muted">
+       <summary style="cursor:pointer">Technical profile</summary>
        <table>
-         <tr><th>Machine</th><td>${esc(p.chip ?? "unknown")} · ${esc(String(p.ram_gib ?? "?"))} GiB</td></tr>
+         <tr><th>Machine</th><td>${esc(p.chip ?? "unknown")} · ${p.ram_gib != null ? esc(String(p.ram_gib)) + " GiB" : "RAM not read"}</td></tr>
          <tr><th>OS / backend</th><td>${esc(p.os ?? "?")} / ${esc(p.backend ?? "?")}</td></tr>
-         <tr><th>Usable model budget</th><td>${esc(String(p.model_budget_gib ?? "?"))} GiB</td></tr>
-         <tr><th>Est. memory bandwidth</th><td>~${esc(String(p.mem_bandwidth_gbs ?? "?"))} GB/s
+         <tr><th>Usable model budget</th><td>${p.model_budget_gib != null ? esc(String(p.model_budget_gib)) + " GiB" : "not measured"}</td></tr>
+         <tr><th>Est. memory bandwidth</th><td>${p.mem_bandwidth_gbs != null ? "~" + esc(String(p.mem_bandwidth_gbs)) + " GB/s" : "not measured"}
              <span class="badge warn">${esc((p.bw_source ?? "unknown").replace("_", " "))}</span></td></tr>
        </table>
-     </div>
+     </details>
      ${recsPayload ? renderRecs(recsPayload) : ""}
      <p class="muted">Approving links this device to <strong>${esc(user.email)}</strong>. You can revoke it anytime.
      beanfit will use it to send you fit updates when better models land.</p>
@@ -246,33 +258,63 @@ export function pairConfirm(user, device, csrf, recsPayload) {
      </form>`, user);
 }
 
-export function renderRecs(payloadJson) {
-  let doc;
-  try { doc = JSON.parse(payloadJson); } catch { return ""; }
-  const rows = (doc.ranked ?? []).slice(0, 8);
-  if (!rows.length) return "";
-  return `<div class="card">
-    <h2>Recommendations snapshot (${esc(doc.use_case ?? "chat")})</h2>
-    <table>
-      <tr><th>Model</th><th>Quant</th><th class="num">Total</th><th class="num">tok/s est</th><th>Fits</th></tr>
-      ${rows.map(r => `<tr>
-        <td>${esc(r.name)}</td>
-        <td>${esc(r.quant ?? "—")}</td>
-        <td class="num">${r.total_gib != null ? esc(r.total_gib) + "G" : "—"}</td>
-        <td class="num">${r.est_tok_s != null ? "~" + esc(r.est_tok_s) + " ±" + esc(r.est_uncertainty_pct ?? "%") + "%" : "—"}</td>
-        <td>${r.fits ? '<span class="badge ok">yes</span>' : '<span class="badge warn">no</span>'}</td>
-      </tr>`).join("")}
-    </table>
-    <p class="muted">Speed numbers are estimates with stated uncertainty — verify with
-    <code>ollama run --verbose</code>.</p>
+function pickCard(key, r) {
+  const info = modelInfo(r.runtime_tag, r.total_gib);
+  const speed = speedBand(r.est_tok_s) ?? { label: "?", plain: "" };
+  const cmd = "ollama pull " + r.runtime_tag + " && ollama run " + r.runtime_tag;
+  const tasks = (info.tasks ?? []).map(t => `<li>${esc(t)}</li>`).join("");
+  return `<div class="card" style="margin:10px 0">
+    <div class="muted" style="text-transform:uppercase;font-size:.72rem;letter-spacing:.08em">${esc(key)}</div>
+    <h2 style="margin:4px 0 2px">${esc(r.name)} <span class="muted" style="font-weight:400">· ${esc(info.role)}</span></h2>
+    <p style="margin:4px 0 6px"><strong>Good for:</strong></p>
+    <ul style="margin:0 0 8px">${tasks}</ul>
+    <p style="margin:4px 0"><strong>Speed: ${esc(speed.label)}</strong>
+      <span class="muted">— ${esc(speed.plain)}</span></p>
+    <details>
+      <summary class="muted" style="cursor:pointer">Try it (one-time setup)</summary>
+      <p class="muted">This downloads the AI to this machine (one time) and opens a private chat.
+      Paste into Terminal (the app on your Mac):</p>
+      <pre>${esc(cmd)}</pre>
+    </details>
   </div>`;
 }
 
+export function renderRecs(payloadJson) {
+  let doc;
+  try { doc = JSON.parse(payloadJson); } catch { return ""; }
+  const rows = doc.ranked ?? [];
+  const picks = plainPicks(rows);
+  const tech = rows.slice(0, 8);
+  if (!tech.length) return "";
+  return `
+    ${picks.map(({ key, row }) => pickCard(key, row)).join("")}
+    <details class="card muted">
+      <summary style="cursor:pointer">For the curious: the full technical rundown</summary>
+      <table>
+        <tr><th>Model</th><th>Quant</th><th class="num">Total</th><th class="num">tok/s est</th><th>Fits</th></tr>
+        ${tech.map(r => `<tr>
+          <td>${esc(r.name)}</td>
+          <td>${esc(r.quant ?? "—")}</td>
+          <td class="num">${r.total_gib != null ? esc(r.total_gib) + "G" : "—"}</td>
+          <td class="num">${r.est_tok_s != null ? "~" + esc(r.est_tok_s) + " ±" + esc(r.est_uncertainty_pct ?? "%") + "%" : "—"}</td>
+          <td>${r.fits ? '<span class="badge ok">yes</span>' : '<span class="badge warn">no</span>'}</td>
+        </tr>`).join("")}
+      </table>
+      <p>Speed numbers are estimates with stated uncertainty — verify with
+      <code>ollama run --verbose</code>.</p>
+    </details>`;
+}
+
 export function deviceDetail(device, rec, user = null) {
+  const cap = capabilityHeadline(device.model_budget_gib);
   return layout(device.label,
     `<h1>${esc(device.label)}</h1>
-     <p class="muted">${esc(device.chip ?? "")} · ${esc(device.os ?? "")} · budget
-     ${esc(String(device.model_budget_gib ?? "?"))} GiB · registered ${esc(device.approved_at ?? "")}</p>
+     <p><strong>${esc(cap.headline)}</strong></p>
+     <ul style="margin:6px 0">${cap.tasks.map(t => `<li>${esc(t)}</li>`).join("")}</ul>
+     <p class="muted">${esc(cap.detail)}</p>
+     <p class="muted">${esc(device.chip ?? "")} · registered ${esc(device.approved_at ?? "")}
+       <details><summary style="cursor:pointer;display:inline">technical</summary>
+       ${esc(device.os ?? "")} · budget ${device.model_budget_gib != null ? esc(String(device.model_budget_gib)) + " GiB" : "not measured"}</details></p>
      ${rec ? renderRecs(rec.payload_json)
        : `<div class="card muted">No recommendation snapshot stored yet.</div>`}`, user);
 }
