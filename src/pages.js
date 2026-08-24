@@ -2,7 +2,7 @@
 import {
   speedBand, modelInfo, capabilityHeadline, deviceTasks, PROMISES, plainPicks,
 } from "./lib/plain.js";
-import { INTERFACES, modelChoices } from "./lib/stack.js";
+import { SURFACES, modelChoices } from "./lib/stack.js";
 
 const CSS = `
 :root { color-scheme: light dark; }
@@ -334,16 +334,17 @@ export function stackForm(device, rec) {
   try { ranked = JSON.parse(rec?.payload_json ?? "{}").ranked ?? []; } catch {}
   const fits = ranked.filter(r => r.fits);
   const rest = ranked.filter(r => !r.fits);
-  const defaultTag = fits[0]?.runtime_tag ?? "gemma4:31b";
   const opt = r => `<option value="${esc(r.runtime_tag)}">${esc(r.name)}</option>`;
+  const surfaces = Object.entries(SURFACES).map(([id, s], i) => `
+    <label style="display:block;margin:6px 0">
+      <input type="checkbox" name="surf" value="${id}" ${i === 0 ? "checked" : ""} style="width:auto;margin-right:8px">
+      ${esc(s.label)} <span class="muted">— ${esc(s.plain)}</span>
+    </label>`).join("");
   return `<div class="card" id="stack-config">
     <h2 style="margin-top:0">Build your setup</h2>
-    <p class="muted">Our suggestion is pre-selected — change anything you like.</p>
-    <p><strong>How do you want to chat?</strong></p>
-    <label style="display:block;margin:6px 0"><input type="radio" name="iface" value="webui" checked style="width:auto;margin-right:8px">
-      ${esc(INTERFACES.webui.label)} <span class="muted">— ${esc(INTERFACES.webui.plain)} (needs Docker, free)</span></label>
-    <label style="display:block;margin:6px 0"><input type="radio" name="iface" value="terminal" style="width:auto;margin-right:8px">
-      ${esc(INTERFACES.terminal.label)} <span class="muted">— ${esc(INTERFACES.terminal.plain)}</span></label>
+    <p class="muted">Tick what you want to do with it — our suggestion comes pre-built, change anything.</p>
+    <p><strong>What do you want to do?</strong></p>
+    ${surfaces}
     <p style="margin-top:14px"><strong>Which AI?</strong></p>
     <select name="model" style="width:100%">
       <optgroup label="Runs great on this machine">${fits.map(opt).join("")}</optgroup>
@@ -357,12 +358,15 @@ export function stackForm(device, rec) {
       if (!btn) return;
       btn.addEventListener("click", function () {
         var root = document.getElementById("stack-config");
-        var iface = root.querySelector('input[name="iface"]:checked').value;
+        var surfaces = Array.prototype.slice.call(
+          root.querySelectorAll('input[name="surf"]:checked')
+        ).map(function (c) { return c.value; });
+        if (!surfaces.length) { alert("Pick at least one thing to do"); return; }
         var model = root.querySelector('select[name="model"]').value;
         btn.disabled = true; btn.textContent = "Building…";
         fetch("/api/devices/${esc(device.id)}/stack", {
           method: "POST", headers: { "content-type": "application/json" },
-          body: JSON.stringify({ interface: iface, model_tag: model })
+          body: JSON.stringify({ surfaces: surfaces, model_tag: model })
         }).then(function (r) { return r.text(); }).then(function (frag) {
           document.getElementById("stack-result").innerHTML = frag;
           bindCopies();
