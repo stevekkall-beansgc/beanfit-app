@@ -5,20 +5,20 @@ import { html } from "./lib/http.js";
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    const auth = makeAuthHandlers(env);
-    const pages = makePageHandlers(env, auth);
-    const api = makePairApiHandlers(env);
-
-    const ctx = {
-      request,
-      env,
-      query: url.searchParams,
-      params: {},
-      form: null,
-      user: await auth.userFromRequest(request),
-    };
-
     try {
+      const auth = makeAuthHandlers(env);
+      const pages = makePageHandlers(env, auth);
+      const api = makePairApiHandlers(env);
+
+      const ctx = {
+        request,
+        env,
+        query: url.searchParams,
+        params: {},
+        form: null,
+        user: await auth.userFromRequest(request),
+      };
+
       const route = match(url.pathname, request.method);
       if (!route) return new Response("Not found", { status: 404 });
       Object.assign(ctx.params, route.params);
@@ -34,7 +34,7 @@ export default {
       }
       return route.handler.call(null, ctx, { auth, pages, api });
     } catch (err) {
-      console.error("unhandled", err);
+      console.error("unhandled", err?.stack ?? err);
       if (url.pathname.startsWith("/api/")) {
         return new Response(JSON.stringify({ error: "internal" }), {
           status: 500, headers: { "content-type": "application/json" },

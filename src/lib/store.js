@@ -121,5 +121,5 @@ export function createStore(db) {
     },
   };
 
-  return { users, sessions, devices, recommendations, catalog };
+  return { users, sessions, identities, devices, recommendations, catalog };
 }
