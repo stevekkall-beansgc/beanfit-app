@@ -4,7 +4,7 @@ import {
   mintState, verifyState, claimsFailureReason, claimsToIdentity, exchangeCode,
 } from "../lib/oauth.js";
 import { createStore } from "../lib/store.js";
-import { signupForm, loginForm } from "../pages.js";
+import { signupForm, loginForm, logoutConfirm } from "../pages.js";
 
 export function makeAuthHandlers(env) {
   const store = createStore(env.DB);
@@ -166,6 +166,10 @@ export function makeAuthHandlers(env) {
       return startSession(user.id, safeNext(ctx.form.next));
     },
 
+    async logoutPage(ctx) {
+      return html(logoutConfirm(ctx.user, await csrfFor(ctx.request)));
+    },
+
     async logoutSubmit(ctx) {
       if (!await assertCsrf(ctx.request, ctx.form))
         return html("<p>Invalid request.</p>", 400);
@@ -179,3 +183,4 @@ export function makeAuthHandlers(env) {
 function nowUnix() {
   return Math.floor(Date.now() / 1000);
 }
+

@@ -19,7 +19,7 @@ export default {
         user: await auth.userFromRequest(request),
       };
 
-      const route = match(url.pathname, request.method);
+      const route = match(url.pathname, request.method === "HEAD" ? "GET" : request.method);
       if (!route) return new Response("Not found", { status: 404 });
       Object.assign(ctx.params, route.params);
 
@@ -56,6 +56,7 @@ const ROUTES = [
   ["POST", "/login", (c, h) => h.auth.loginSubmit(c)],
   ["GET", "/auth/google/start", (c, h) => h.auth.googleStart(c)],
   ["GET", "/auth/google/callback", (c, h) => h.auth.googleCallback(c)],
+  ["GET", "/logout", (c, h) => h.auth.logoutPage(c), "required"],
   ["POST", "/logout", (c, h) => h.auth.logoutSubmit(c)],
   ["GET", "/dashboard", (c, h) => h.pages.dashboard(c), "required"],
   ["GET", "/devices/:id", (c, h) => h.pages.deviceDetail(c), "required"],

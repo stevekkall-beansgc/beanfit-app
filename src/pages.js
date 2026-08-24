@@ -420,6 +420,17 @@ export function pairPendingPage(code) {
      </div>`);
 }
 
+export function logoutConfirm(user, csrf) {
+  return layout("Sign out",
+    `<h1>Sign out?</h1>
+     <form method="post" action="/logout" class="card">
+       <input type="hidden" name="csrf" value="${esc(csrf)}">
+       <p class="muted">Signed in as ${esc(user?.email ?? "")}. Your devices stay registered.</p>
+       <button>Sign out</button>
+       <button class="secondary" formaction="/dashboard">Cancel</button>
+     </form>`, user);
+}
+
 export function pairLookupForm(error = "", user = null) {
   return layout("Register a device",
     `<h1>Register a device</h1>
