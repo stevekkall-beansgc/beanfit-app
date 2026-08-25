@@ -4,7 +4,7 @@
 set -euo pipefail
 
 BASE="${1:-http://127.0.0.1:8787}"
-BEANFIT_SRC="${BEANFIT_SRC:-$HOME/Desktop/beanfit/src}"
+BEANFIT_SRC="${BEANFIT_SRC:-$HOME/beans/products/beanfit/src}"
 JAR="$(mktemp)"
 HOME_DIR="$(mktemp -d)"
 REGLOG="$(mktemp)"
@@ -52,5 +52,20 @@ print('credential file OK:', sorted(doc))
 echo "== 6. dashboard lists the device"
 DASH=$(curl -s -b "$JAR" "$BASE/dashboard")
 echo "$DASH" | grep -q "E2E Test Mac" && echo "dashboard shows device OK"
+
+DEVICE_ID=$(curl -s -b "$JAR" "$BASE/dashboard" | grep -oE '/devices/[a-f0-9]{32}' | head -1 | cut -d/ -f3)
+[ -n "$DEVICE_ID" ] || { echo "no device id on dashboard"; exit 1; }
+
+echo "== 7. configurator honors surfaces (regression: interface/surfaces seam)"
+FRAG=$(curl -s -b "$JAR" -H "content-type: application/json" \
+  -d '{"surfaces":["code_opencode","chat_webui"],"model_tag":null}' \
+  "$BASE/api/devices/$DEVICE_ID/stack")
+echo "$FRAG" | grep -qi "opencode" && echo "configurator surface OK (non-webui content present)"
+DETAIL=$(curl -s -b "$JAR" "$BASE/devices/$DEVICE_ID")
+echo "$DETAIL" | grep -q "Your setup" && echo "persisted stack renders OK"
+
+echo "== 8. OAuth cancel page keeps the Google button (passwordless lockout guard)"
+CB=$(curl -s -b "$JAR" "$BASE/auth/google/callback?error=access_denied")
+echo "$CB" | grep -q "Continue with Google" && echo "oauth error path keeps SSO button OK"
 
 echo "E2E PASS"
