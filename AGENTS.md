@@ -32,7 +32,7 @@ build step; plain JS string templates with strict escaping.
   both repos together (conformance pin pending, audit X5).
 
 ## Known debt
-Audit findings in `~/Desktop/BeanLabs/AUDIT-2026-08/findings/BFA-*.md`.
+Audit findings in `~/beans/labs/beanlabs/AUDIT-2026-08/findings/BFA-*.md`.
 
 ## Review rules
 Binding contract: `~/beans/platform/qa-kit/README.md`. Done =
