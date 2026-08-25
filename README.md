@@ -53,3 +53,7 @@ node --test                                                      # unit tests
 ## Deploying
 
 See [DEPLOY.md](DEPLOY.md). Still $0 on Cloudflare free tiers at pilot scale.
+
+---
+
+**Agents:** see [AGENTS.md](AGENTS.md) before changing anything here.
