@@ -8,7 +8,9 @@ export const UNCERTAINTY_PCT = {
 };
 
 export function decodeTokS(bandwidthGbs, totalMemGib, quant) {
-  return bandwidthGbs / totalMemGib * 0.85 * QUANT_SPEEDUP[quant.split("_")[0]];
+  const speedup = QUANT_SPEEDUP[quant.split("_")[0]];
+  if (speedup === undefined) throw new Error(`unknown quant label: ${quant}`);
+  return bandwidthGbs / totalMemGib * 0.85 * speedup;
 }
 
 export function fits(model, hw) {

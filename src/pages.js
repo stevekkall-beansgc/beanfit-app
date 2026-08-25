@@ -359,6 +359,10 @@ export function stackForm(device, rec) {
           document.getElementById("stack-result").innerHTML = frag;
           bindCopies();
           btn.disabled = false; btn.textContent = "Generate my setup";
+        }).catch(function () {
+          var box = document.getElementById("stack-result");
+          if (box) box.innerHTML = '<p class="error">Could not build your setup — check your connection and try again.</p>';
+          btn.disabled = false; btn.textContent = "Generate my setup";
         });
       });
       function bindCopies() {

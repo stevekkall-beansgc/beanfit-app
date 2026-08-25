@@ -41,6 +41,19 @@ export function makeAuthHandlers(env) {
       ? value : "";
   }
 
+  // Identity links are idempotent under concurrent callbacks: a UNIQUE
+  // violation means another request linked first — re-find and proceed.
+  async function linkIdentity(provider, providerUid, userId, email) {
+    try {
+      await store.identities.create(provider, providerUid, userId, email);
+    } catch (e) {
+      const known = await store.identities.find(provider, providerUid);
+      if (!known) throw e;
+      return known.user_id;
+    }
+    return userId;
+  }
+
   function ssoConfigured() {
     return Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
   }
@@ -115,8 +128,8 @@ export function makeAuthHandlers(env) {
     // 2. Same email → link identity to the existing account.
     const byEmail = await store.users.byEmail(identity.email);
     if (byEmail) {
-      await store.identities.create(identity.provider, identity.uid, byEmail.id, identity.email);
-      return startSession(byEmail.id, verified.path);
+      const linkedId = await linkIdentity(identity.provider, identity.uid, byEmail.id, identity.email);
+      return startSession(linkedId, verified.path);
     }
 
     // 3. New user (passwordless — Google owns the credential). One atomic
@@ -134,8 +147,8 @@ export function makeAuthHandlers(env) {
         console.error("signup create failed", e);
         return html(authForm("login", { error: "Could not create your account. Try again.", sso: ssoConfigured() }));
       }
-      await store.identities.create(identity.provider, identity.uid, existing.id, identity.email);
-      return startSession(existing.id, verified.path || "/dashboard");
+      const linkedId = await linkIdentity(identity.provider, identity.uid, existing.id, identity.email);
+      return startSession(linkedId, verified.path || "/dashboard");
     }
     return startSession(userId, verified.path || "/dashboard");
   }
