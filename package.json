@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "wrangler dev --local",
     "test": "node --test",
+    "test:e2e": "bash scripts/e2e-local.sh",
     "deploy": "wrangler deploy"
   },
   "devDependencies": {
