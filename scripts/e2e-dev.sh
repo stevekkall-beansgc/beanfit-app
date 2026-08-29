@@ -16,7 +16,7 @@ curl -s -o /dev/null -w "signup: %{http_code} -> %{redirect_url}\n" \
   "$BASE/signup"
 
 echo "== 2. start beanfit register (isolated HOME)"
-HOME="$HOME_DIR" PYTHONPATH="$BEANFIT_SRC" \
+HOME="$HOME_DIR" BEANFIT_ALLOW_UNSUPPORTED_PLATFORM=1 PYTHONPATH="$BEANFIT_SRC" \
   python3 -m beanfit register --server "$BASE" --use-case coding > "$REGLOG" 2>&1 &
 REGLOG_FILE="$REGLOG"
 REG_PID=$!
