@@ -60,6 +60,7 @@ const ROUTES = [
   ["POST", "/logout", (c, h) => h.auth.logoutSubmit(c)],
   ["GET", "/dashboard", (c, h) => h.pages.dashboard(c), "required"],
   ["GET", "/devices/:id", (c, h) => h.pages.deviceDetail(c), "required"],
+  ["POST", "/devices/:id/revoke", (c, h) => h.pages.revokeDevice(c), "required"],
   ["POST", "/api/devices/:id/stack", (c, h) => h.pages.generateStackRoute(c), "required"],
   ["GET", "/pair", (c, h) => h.pages.pairLookup(c), "required"],
   ["GET", "/pair/:code", (c, h) => h.pages.pairConfirmRoute(c), "required"],
@@ -67,6 +68,7 @@ const ROUTES = [
   ["POST", "/pair/:code/deny", (c, h) => h.pages.pairDeny(c), "required"],
   ["POST", "/api/pair/start", (c, h) => h.api.start(c)],
   ["GET", "/api/pair/status/:pairId", (c, h) => h.api.status(c)],
+  ["GET", "/api/pair/claim/:pairId", (c, h) => h.api.claim(c)],
 ];
 
 function match(pathname, method) {

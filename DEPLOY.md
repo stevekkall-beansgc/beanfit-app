@@ -16,6 +16,8 @@ npx wrangler d1 create beanfit-app
 # 3. Apply schema
 npx wrangler d1 execute beanfit-app --remote --file schema.sql
 npx wrangler d1 execute beanfit-app --remote --file migrations/0002_user_identities.sql
+npx wrangler d1 execute beanfit-app --remote --file migrations/0003_device_stack.sql
+npx wrangler d1 execute beanfit-app --remote --file migrations/0004_device_credential_handoff.sql
 
 # 4. Set secrets (values from BeanLaunch secret store, never committed)
 bl get beanfit-app-session-secret | npx wrangler secret put SESSION_SECRET
@@ -47,5 +49,5 @@ curl -o /dev/null -w "%{http_code}\n" $BEANFIT_SERVER/     # 200
 - [ ] Swap dev stack-trace error page (already gated on ENVIRONMENT var)
 - [ ] Add `Content-Security-Policy` header to layout responses
 - [ ] Email verification before pairing approval (Resend free tier or Pulse)
-- [ ] Device revocation UI (`POST /devices/:id/revoke`) — schema-ready,
-      route pending
+- [x] Device revocation UI invalidates the stored credential hash. A device
+      must be paired again after revocation.

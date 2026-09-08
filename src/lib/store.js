@@ -57,10 +57,10 @@ export function createStore(db) {
     async createPending(d) {
       return db.prepare(`INSERT INTO devices
         (id, label, pair_code, pair_id, pair_expires_at,
-         os, arch, backend, chip, family, variant,
+         pair_claim_hash, os, arch, backend, chip, family, variant,
          ram_gib, metal_cap_gib, model_budget_gib, mem_bandwidth_gbs, bw_source)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(
-        d.id, d.label, d.pair_code, d.pair_id, d.pair_expires_at,
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(
+        d.id, d.label, d.pair_code, d.pair_id, d.pair_expires_at, d.pair_claim_hash,
         d.os, d.arch, d.backend, d.chip, d.family, d.variant,
         d.ram_gib, d.metal_cap_gib, d.model_budget_gib, d.mem_bandwidth_gbs, d.bw_source,
       ).run();
@@ -92,11 +92,11 @@ export function createStore(db) {
     },
     // Single guarded transition: claim + token land atomically, so the CLI
     // can never poll an approved row whose token has not been written yet.
-    async approve(deviceId, userId, tokenHash, token) {
+    async approve(deviceId, userId, tokenHash) {
       return db.prepare(
         "UPDATE devices SET user_id = ?, status = 'approved', approved_at = datetime('now')," +
-        " device_token_hash = ?, device_token = ? WHERE id = ? AND status = 'pending'"
-      ).bind(userId, tokenHash, token, deviceId).run();
+        " device_token_hash = ? WHERE id = ? AND status = 'pending'"
+      ).bind(userId, tokenHash, deviceId).run();
     },
     async denyPending(deviceId) {
       return db.prepare("UPDATE devices SET status = 'denied' WHERE id = ? AND status = 'pending'")
@@ -105,6 +105,12 @@ export function createStore(db) {
     async setStack(deviceId, stackJson) {
       return db.prepare("UPDATE devices SET stack_json = ? WHERE id = ?")
         .bind(stackJson, deviceId).run();
+    },
+    async revoke(deviceId, userId) {
+      return db.prepare(
+        "UPDATE devices SET status = 'revoked', device_token_hash = NULL, pair_claim_hash = NULL," +
+        " revoked_at = datetime('now') WHERE id = ? AND user_id = ? AND status = 'approved'"
+      ).bind(deviceId, userId).run();
     },
   };
 

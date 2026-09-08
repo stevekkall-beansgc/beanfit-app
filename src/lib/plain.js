@@ -13,7 +13,7 @@ export function speedBand(tokS) {
 // Per-model plain descriptions (keyed by ollama tag; kept in sync with the
 // CLI catalog). Fallback tiers use weight size when a model is unknown.
 const MODEL_INFO = {
-  "qwen3.5:9b": {
+  "qwen3:8b": {
     role: "Quick helper",
     blurb: "Snappy answers for everyday stuff",
     tasks: ["Answer everyday questions", "Summarize notes and articles", "Draft short emails and texts"],
@@ -28,12 +28,12 @@ const MODEL_INFO = {
     blurb: "The dependable daily driver",
     tasks: ["Draft and edit documents", "Write and fix code", "Follow detailed instructions"],
   },
-  "gemma4:31b": {
+  "gemma3:27b": {
     role: "Smart all-rounder",
     blurb: "Great everyday brain",
     tasks: ["Answer questions with nuance", "Draft long documents", "Help with code"],
   },
-  "qwen3.6:35b-a3b": {
+  "qwen3:30b-a3b": {
     role: "Big smarts, quick feet",
     blurb: "Near top-tier quality that still feels fast",
     tasks: ["High-quality writing at speed", "Analyze long documents", "Solid coding help"],
@@ -48,15 +48,10 @@ const MODEL_INFO = {
     blurb: "Built for software work",
     tasks: ["Write new code", "Find and fix bugs", "Explain unfamiliar code"],
   },
-  "mistral-small3.2": {
+  "mistral-small3.1:24b": {
     role: "All-rounder",
     blurb: "Solid general-purpose assistant",
     tasks: ["Everyday assistant tasks", "Drafting", "Q&A"],
-  },
-  "kimi-k2.6": {
-    role: "Heavyweight brain",
-    blurb: "Frontier-class smarts",
-    tasks: ["The hardest reasoning problems", "Long, complex documents", "Expert-level coding"],
   },
 };
 

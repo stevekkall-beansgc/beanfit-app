@@ -32,9 +32,10 @@ revocable.
 ```
 CLI (beanfit register)          Web app
   detect → evaluate ──POST──▶ /api/pair/start        (pending device + code)
-  poll ◀─────────────GET───── /api/pair/status/:id
+  poll ◀─────────────GET───── /api/pair/status/:id       (status only)
   user approves in browser ─▶ /pair/:code/approve    (device claimed + token issued)
-  credential saved locally
+  credential ◀───────────────GET───── /api/pair/claim/:id (start-time secret)
+  credential saved locally (owner-only file)
                                  drift-watch later: catalog diff × stored profiles
                                                    → outbound_updates outbox
 ```
@@ -44,6 +45,7 @@ CLI (beanfit register)          Web app
 ```bash
 npm install
 npx wrangler d1 execute beanfit-app --local --file schema.sql   # first time
+npx wrangler d1 execute beanfit-app --local --file migrations/0004_device_credential_handoff.sql
 BEANFIT_SRC=../beanfit/src node scripts/sync_catalog.js         # load catalog
 npm run dev                                                      # :8787
 node --test                                                      # unit tests

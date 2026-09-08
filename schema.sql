@@ -24,7 +24,7 @@ CREATE TABLE devices (
   pair_id TEXT UNIQUE,               -- pollable id given to the CLI
   pair_expires_at INTEGER,
   device_token_hash TEXT,            -- lookup key for check-in auth
-  device_token TEXT,                 -- revealed to the owning CLI; delete after first read client-side
+  device_token TEXT,                 -- legacy only; migration 0004 scrubs it and code never writes it
   os TEXT, arch TEXT, backend TEXT,
   chip TEXT, family TEXT, variant TEXT,
   ram_gib REAL, metal_cap_gib REAL, model_budget_gib REAL,

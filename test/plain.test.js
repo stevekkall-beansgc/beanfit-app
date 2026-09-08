@@ -14,7 +14,7 @@ test("speed bands translate tok/s to experience", () => {
 });
 
 test("known models get their plain role; unknowns fall back by size", () => {
-  assert.equal(modelInfo("gemma4:31b", 20.4).role, "Smart all-rounder");
+  assert.equal(modelInfo("gemma3:27b", 17.9).role, "Smart all-rounder");
   assert.equal(modelInfo("deepseek-coder-v2:16b", 11.2).role, "Coding specialist");
   assert.equal(modelInfo("mystery:7b", 5).role, "Quick helper");
   assert.equal(modelInfo("mystery:70b", 45).role, "Heavyweight brain");

@@ -149,8 +149,8 @@ export function dashboard(user, devices) {
       Exact numbers (RAM, memory cap) come from the CLI below.</p>
       <div class="divider">or register with exact numbers</div>
       <p class="muted">On the machine you want to register:</p>
-      <pre id="cli-cmds">$ pipx install beanfit
-$ beanfit register  <button class="secondary" id="copy-cmds" style="padding:2px 10px;font-size:.8rem">copy</button></pre>
+      <pre id="cli-cmds">$ git clone https://github.com/stevekkall-beansgc/beanfit &amp;&amp; cd beanfit
+$ PYTHONPATH=src python3 -m beanfit register  <button class="secondary" id="copy-cmds" style="padding:2px 10px;font-size:.8rem">copy</button></pre>
       <p class="muted">You'll get a pairing code to approve here — same as the quick path,
       but with exact hardware and full recommendations.</p>
     </div>
@@ -202,7 +202,7 @@ $ beanfit register  <button class="secondary" id="copy-cmds" style="padding:2px 
       });
       var copy = document.getElementById("copy-cmds");
       if (copy) copy.addEventListener("click", function () {
-        navigator.clipboard.writeText("pipx install beanfit && beanfit register");
+        navigator.clipboard.writeText("git clone https://github.com/stevekkall-beansgc/beanfit && cd beanfit && PYTHONPATH=src python3 -m beanfit register");
         copy.textContent = "copied";
       });
     })();
@@ -212,7 +212,7 @@ $ beanfit register  <button class="secondary" id="copy-cmds" style="padding:2px 
     `<h1>Your devices</h1>
      ${devices.length ? `<div class="grid">${cards}</div>` : emptyState}
      ${devices.length ? `<p class="muted">To register another machine, run
-       <code>pipx install beanfit &amp;&amp; beanfit register</code> on it.</p>` : ""}`, user);
+       <code>git clone https://github.com/stevekkall-beansgc/beanfit &amp;&amp; cd beanfit &amp;&amp; PYTHONPATH=src python3 -m beanfit register</code> on it.</p>` : ""}`, user);
 }
 
 export function pairConfirm(user, device, csrf, recsPayload) {
@@ -379,7 +379,7 @@ export function stackForm(device, rec) {
   </div>`;
 }
 
-export function deviceDetail(device, rec, user = null, stack = null) {
+export function deviceDetail(device, rec, user = null, stack = null, csrf = "") {
   const cap = capabilityHeadline(device.model_budget_gib);
   return layout(device.label,
     `<h1>${esc(device.label)}</h1>
@@ -392,7 +392,12 @@ export function deviceDetail(device, rec, user = null, stack = null) {
      ${rec ? renderRecs(rec.payload_json)
        : `<div class="card muted">No recommendation snapshot stored yet.</div>`}
      ${stack ? `<div class="card"><h2 style="margin-top:0">Your setup</h2>${renderStack(stack)}</div>` : ""}
-     ${stackForm(device, rec)}`, user);
+     ${stackForm(device, rec)}
+     <form method="post" action="/devices/${esc(device.id)}/revoke" class="card">
+       <input type="hidden" name="csrf" value="${esc(csrf)}">
+       <p class="muted">Revoking disconnects this device and invalidates its credential.</p>
+       <button class="secondary">Revoke this device</button>
+     </form>`, user);
 }
 
 export function pairDone(ok, message, user = null) {

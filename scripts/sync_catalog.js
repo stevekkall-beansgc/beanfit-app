@@ -27,15 +27,17 @@ try {
 }
 
 const esc = s => String(s ?? "").replace(/'/g, "''");
-const rows = doc.models.map(m => {
+// Reconcile, rather than only upsert: a retired catalog row must not remain
+// selectable by the app's drift-watch after the CLI source removes it.
+const rows = ["UPDATE catalog_models SET active = 0;", ...doc.models.map(m => {
   const mlx = doc.mlx_repos[m.runtime_tag] ?? null;
   return `INSERT INTO catalog_models (ollama_tag, name, params_b, mem_q4, mem_q8, kv32k, qual_coding, qual_reasoning, qual_chat, mlx_repo)
 VALUES ('${esc(m.runtime_tag)}', '${esc(m.name)}', ${m.params_b}, ${m.mem_q4}, ${m.mem_q8}, ${m.kv32k}, ${m.qual_coding}, ${m.qual_reasoning}, ${m.qual_chat}, ${mlx ? `'${esc(mlx)}'` : "NULL"})
 ON CONFLICT(ollama_tag) DO UPDATE SET name=excluded.name, params_b=excluded.params_b,
   mem_q4=excluded.mem_q4, mem_q8=excluded.mem_q8, kv32k=excluded.kv32k,
   qual_coding=excluded.qual_coding, qual_reasoning=excluded.qual_reasoning,
-  qual_chat=excluded.qual_chat, mlx_repo=excluded.mlx_repo;`;
-});
+  qual_chat=excluded.qual_chat, mlx_repo=excluded.mlx_repo, active=1;`;
+})];
 
 const sqlFile = join(mkdtempSync(join(tmpdir(), "bfcat-")), "catalog.sql");
 writeFileSync(sqlFile, rows.join("\n\n"));

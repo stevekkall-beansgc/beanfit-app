@@ -1,5 +1,5 @@
 import { html, json, redirect } from "../lib/http.js";
-import { randomHex, pairingCode, sha256Hex } from "../lib/crypto.js";
+import { hmacHex, randomHex, pairingCode, sha256Hex } from "../lib/crypto.js";
 import { createStore } from "../lib/store.js";
 import { sanitizeProfile, sanitizeRanked } from "../lib/fit.js";
 import {
@@ -28,7 +28,7 @@ export function makePageHandlers(env, auth) {
       if (!device) return new Response("Not found", { status: 404 });
       const rec = await store.recommendations.forDevice(device.id);
       const stack = device.stack_json ? JSON.parse(device.stack_json) : null;
-      return html(deviceDetail(device, rec, ctx.user, stack));
+      return html(deviceDetail(device, rec, ctx.user, stack, await auth.csrfFor(ctx.request)));
     },
 
     // Generate (and persist) the user's stack. Returns an HTML fragment so
@@ -66,14 +66,22 @@ export function makePageHandlers(env, auth) {
         ctx.params.code.toUpperCase(), Math.floor(Date.now() / 1000));
       if (!device)
         return html(pairDone(false, "Invalid or expired code. Run `beanfit register` again.", ctx.user));
-      const token = randomHex(24);
+      const token = await deviceCredential(env, device.id);
       // approve() carries the status='pending' guard; a concurrent approver
       // wins the row and ours matches zero rows — never overwrite their token.
-      const res = await store.devices.approve(device.id, ctx.user.id, await sha256Hex(token), token);
+      const res = await store.devices.approve(device.id, ctx.user.id, await sha256Hex(token));
       if (!res?.meta?.changes)
         return html(pairDone(false, "Invalid or expired code. Run `beanfit register` again.", ctx.user));
       return html(pairDone(true,
         `"${(form.label || device.label).slice(0, 64)}" is registered. Your terminal now has your recommendations.`, ctx.user));
+    },
+
+    async revokeDevice(ctx) {
+      const form = ctx.form ?? {};
+      if (!await auth.assertCsrf(ctx.request, form)) return html("<p>Invalid request.</p>", 400);
+      const result = await store.devices.revoke(ctx.params.id, ctx.user.id);
+      if (!result?.meta?.changes) return new Response("Not found", { status: 404 });
+      return redirect("/dashboard");
     },
 
     async pairDeny(ctx) {
@@ -109,12 +117,14 @@ export function makePairApiHandlers(env) {
       if (!profile?.chip) return json({ error: "profile.hardware missing or invalid" }, 422);
 
       const id = randomHex(16), pairId = randomHex(12), code = pairingCode();
+      const pairClaim = randomHex(24);
       await store.devices.createPending({
         id,
         label: String(body.label ?? profile.chip).slice(0, 64),
         pair_code: code,
         pair_id: pairId,
         pair_expires_at: Math.floor(Date.now() / 1000) + PAIR_TTL,
+        pair_claim_hash: await sha256Hex(pairClaim),
         ...profile,
       });
       if (body.recommendations) {
@@ -126,7 +136,7 @@ export function makePairApiHandlers(env) {
           JSON.stringify({ use_case: r.use_case, ranked: sanitizeRanked(r.ranked) }),
         );
       }
-      return json({ pair_id: pairId, code, expires_in: PAIR_TTL }, 201);
+      return json({ pair_id: pairId, pair_claim: pairClaim, code, expires_in: PAIR_TTL }, 201);
     },
 
     // CLI -> GET /api/pair/status/:pairId (poll until approved/denied/expired)
@@ -134,14 +144,27 @@ export function makePairApiHandlers(env) {
       const device = await store.devices.byPairId(params.pairId);
       if (!device) return json({ error: "unknown pair_id" }, 404);
       if (device.status === "pending" && expired(device)) return json({ status: "expired" });
-      if (device.status === "approved")
-        return json({
-          status: "approved", device_id: device.id,
-          device_token: device.device_token ?? null,
-        });
+      if (device.status === "approved") return json({ status: "approved", device_id: device.id });
       return json({ status: device.status });
     },
+
+    // The pair ID is deliberately status-only. The CLI must prove possession
+    // of the start-time secret before a credential can be returned.
+    async claim({ params, request }) {
+      const device = await store.devices.byPairId(params.pairId);
+      const claim = request.headers.get("x-beanfit-pair-claim") ?? "";
+      if (!device || device.status !== "approved" || expired(device)
+          || !device.pair_claim_hash || await sha256Hex(claim) !== device.pair_claim_hash)
+        return json({ error: "pairing credential unavailable" }, 404);
+      return json({ status: "approved", device_id: device.id,
+        device_token: await deviceCredential(env, device.id) });
+    },
   };
+}
+
+async function deviceCredential(env, deviceId) {
+  if (!env.SESSION_SECRET) throw new Error("SESSION_SECRET is required for device credentials");
+  return hmacHex(env.SESSION_SECRET, `beanfit-device:${deviceId}:v1`);
 }
 
 function expired(device) {

@@ -32,17 +32,17 @@ export const SURFACES = {
   },
 };
 
-// The model catalog the configurator offers. Mirrors the CLI catalog.
-const MODELS = {
-  "qwen3.5:9b": { name: "Qwen3.5 9B", mem_q4: 6.2, kv32k: 0.9 },
-  "phi4-reasoning:14b": { name: "Phi-4-reasoning 14B", mem_q4: 9.3, kv32k: 1.2 },
-  "gpt-oss:20b": { name: "gpt-oss 20B", mem_q4: 12.5, kv32k: 1.4 },
-  "deepseek-coder-v2:16b": { name: "DeepSeek Coder V2 16B", mem_q4: 10.5, kv32k: 1.3 },
-  "llama4:scout": { name: "Llama 4 Scout 17B", mem_q4: 11.0, kv32k: 1.5 },
-  "mistral-small3.2": { name: "Mistral Small 3.2 24B", mem_q4: 15.0, kv32k: 1.6 },
-  "gemma4:31b": { name: "Gemma 4 31B", mem_q4: 19.5, kv32k: 1.8 },
-  "qwen3.6:35b-a3b": { name: "Qwen3.6 35B MoE", mem_q4: 21.5, kv32k: 1.9 },
-  "kimi-k2.6": { name: "Kimi K2.6", mem_q4: 640, kv32k: 6.0 },
+// The model catalog the configurator offers. This is the checked-in mirror of
+// `beanfit --export-catalog`; catalog-artifact.test.js prevents silent drift.
+export const MODELS = {
+  "qwen3:8b": { name: "Qwen3 8B", mem_q4: 5.2, mem_q8: 8.9, kv32k: 0.9 },
+  "phi4-reasoning:14b": { name: "Phi-4-reasoning 14B", mem_q4: 11.0, mem_q8: 17.0, kv32k: 1.2 },
+  "gpt-oss:20b": { name: "gpt-oss 20b (MXFP4)", mem_q4: 14.0, mem_q8: 14.0, kv32k: 1.4 },
+  "gemma3:27b": { name: "Gemma 3 27B", mem_q4: 17.0, mem_q8: 30.0, kv32k: 1.8 },
+  "qwen3:30b-a3b": { name: "Qwen3 30B-A3B (MoE)", mem_q4: 19.0, mem_q8: 32.0, kv32k: 1.9 },
+  "llama4:scout": { name: "Llama 4 Scout 109B (16x17B MoE)", mem_q4: 67.0, mem_q8: 117.0, kv32k: 1.5 },
+  "deepseek-coder-v2:16b": { name: "DeepSeek Coder V2 16B", mem_q4: 10.0, mem_q8: 17.0, kv32k: 1.3 },
+  "mistral-small3.1:24b": { name: "Mistral Small 3.1 24B", mem_q4: 15.0, mem_q8: 26.0, kv32k: 1.6 },
 };
 
 export function modelChoices() {
@@ -73,7 +73,7 @@ export function generateStack(profile, choices) {
     ? choices.surfaces.filter(s => SURFACES[s])
     : [];
   const use = surfaces.length ? surfaces : ["chat_webui"];
-  const tag = MODELS[choices.model_tag] ? choices.model_tag : "gemma4:31b";
+  const tag = MODELS[choices.model_tag] ? choices.model_tag : "gemma3:27b";
   const modelName = MODELS[tag].name;
   const warnings = [];
   const steps = [];
