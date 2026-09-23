@@ -47,7 +47,7 @@ export default {
       if (route.auth === "bearer" && !authorizedMaintenanceBearer(request, env)) {
         return new Response("Unauthorized", { status: 401, headers: { "cache-control": "no-store" } });
       }
-      return route.handler.call(null, ctx, { auth, pages, api, maintenance, assets });
+      return await route.handler.call(null, ctx, { auth, pages, api, maintenance, assets });
     } catch (err) {
       console.error("unhandled", err?.stack ?? err);
       if (url.pathname.startsWith("/api/")) {

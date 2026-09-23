@@ -240,6 +240,7 @@ export function makeAuthHandlers(env, deps = {}) {
 
     async signupSubmit(ctx) {
       const form = ctx.form;
+      if (!form) return html("<p>Invalid request.</p>", 400);
       const email = String(form.email ?? "").trim().toLowerCase();
       const password = String(form.password ?? "");
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))
@@ -258,19 +259,21 @@ export function makeAuthHandlers(env, deps = {}) {
     },
 
     async loginSubmit(ctx) {
-      const email = String(ctx.form.email ?? "").trim().toLowerCase();
+      const form = ctx.form;
+      if (!form) return html("<p>Invalid request.</p>", 400);
+      const email = String(form.email ?? "").trim().toLowerCase();
       const user = await store.users.byEmail(email);
       if (user && !user.pw_hash)
         return html(authForm("login", {
           error: ssoConfigured()
             ? "This account signs in with Google."
             : "Password sign-in isn't set up for this account.",
-          next: safeNext(ctx.form.next),
+          next: safeNext(form.next),
           sso: ssoConfigured(),
         }));
-      const ok = user && await verifyPassword(String(ctx.form.password ?? ""), user.pw_hash);
+      const ok = user && await verifyPassword(String(form.password ?? ""), user.pw_hash);
       if (!ok) return html(authForm("login", { error: "Wrong email or password.", sso: ssoConfigured() }));
-      return startSession(user.id, safeNext(ctx.form.next));
+      return startSession(user.id, safeNext(form.next));
     },
 
     async logoutPage(ctx) {

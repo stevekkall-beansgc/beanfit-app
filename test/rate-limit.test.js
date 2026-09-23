@@ -222,6 +222,75 @@ test("an allowed binding decision continues to the scoped route handler", async 
   assert.equal(request.bodyUsed, true);
 });
 
+test("JSON signup requests are rejected with 400 before async handler failure", async () => {
+  const state = baseEnv();
+  const request = makeRequest("/signup", {
+    body: "{}",
+    contentType: "application/json",
+    cookie: null,
+  });
+  const response = await worker.fetch(request, state.env);
+  assert.equal(response.status, 400);
+  assert.match(await response.text(), /Invalid request/);
+  assert.equal(state.calls.SIGNUP_RATE_LIMITER.length, 1);
+  assert.equal(request.bodyUsed, false);
+  assert.equal(state.stats.prepares, 0);
+  assert.equal(state.stats.batches, 0);
+});
+
+test("rejected async route handlers become the generic production response", async () => {
+  const state = baseEnv();
+  state.env.DB = {
+    prepare: () => ({
+      bind: () => ({
+        first: async () => null,
+        all: async () => ({ results: [] }),
+        run: async () => { throw new Error("d1 failure"); },
+      }),
+    }),
+  };
+  const originalError = console.error;
+  const logs = [];
+  console.error = (...args) => logs.push(args.join(" "));
+  let response;
+  try {
+    response = await worker.fetch(makeRequest("/api/pair/start", {
+      body: JSON.stringify({ profile: { hardware: { chip: "private-profile-marker" } } }),
+      contentType: "application/json",
+      cookie: null,
+    }), state.env);
+  } finally {
+    console.error = originalError;
+  }
+  assert.equal(response.status, 500);
+  assert.deepEqual(await response.json(), { error: "internal" });
+  assert.equal(state.calls.PAIR_START_RATE_LIMITER.length, 1);
+  assert.ok(logs.length > 0);
+  assert.doesNotMatch(logs.join("\n"), /203\.0\.113\.42|private-profile-marker/);
+});
+
+test("repeated invalid pair requests consult the native limiter on every request", async () => {
+  const state = baseEnv({ result: { success: true } });
+  for (let i = 0; i < 12; i++) {
+    const response = await worker.fetch(makeRequest("/api/pair/start", {
+      body: "{}",
+      contentType: "application/json",
+      cookie: null,
+    }), state.env);
+    assert.equal(response.status, 422);
+  }
+  assert.equal(state.calls.PAIR_START_RATE_LIMITER.length, 12);
+  assert.equal(new Set(state.calls.PAIR_START_RATE_LIMITER).size, 1);
+
+  const limited = baseEnv({ result: { success: false } });
+  const response = await worker.fetch(makeRequest("/api/pair/start", {
+    body: "{}",
+    contentType: "application/json",
+    cookie: null,
+  }), limited.env);
+  assertLimitedResponse(response, 429, true);
+});
+
 test("production fails closed with 503 for missing dependencies or invalid binding results", async () => {
   const scenarios = [
     ["missing binding", (state, requestOptions) => {
