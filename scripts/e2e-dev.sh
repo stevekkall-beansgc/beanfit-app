@@ -68,4 +68,25 @@ echo "== 8. OAuth cancel page keeps the Google button (passwordless lockout guar
 CB=$(curl -s -b "$JAR" "$BASE/auth/google/callback?error=access_denied")
 echo "$CB" | grep -q "Continue with Google" && echo "oauth error path keeps SSO button OK"
 
+echo "== 9. dashboard exposes the explicit Google link form (session + CSRF)"
+DASH2=$(curl -s -b "$JAR" "$BASE/dashboard")
+echo "$DASH2" | grep -q 'action="/auth/google/link"' && echo "dashboard link form OK"
+echo "$DASH2" | grep -q "A matching email never links an account on its own" && echo "no-email-takeover copy OK"
+LC=$(echo "$DASH2" | grep -o 'name="csrf" value="[a-f0-9]*"' | head -2 | tail -1 | sed -E 's/.*value="([a-f0-9]+)"/\1/')
+[ -n "$LC" ] || { echo "no link csrf token"; exit 1; }
+
+echo "== 10. link initiation requires CSRF"
+CODE=$(curl -s -b "$JAR" -o /dev/null -w "%{http_code}" -X POST \
+  -H "content-type: application/x-www-form-urlencoded" -d "csrf=wrong" "$BASE/auth/google/link")
+[ "$CODE" = "400" ] && echo "missing/wrong csrf -> 400 OK" || { echo "expected 400, got $CODE"; exit 1; }
+
+echo "== 11. link initiation requires a session (route auth flag)"
+CODE=$(curl -s -o /dev/null -w "%{http_code}:%{redirect_url}" -X POST \
+  -H "content-type: application/x-www-form-urlencoded" -d "csrf=x" "$BASE/auth/google/link")
+echo "$CODE" | grep -q "^303:.*login" && echo "unauthenticated link -> login OK" || { echo "unexpected: $CODE"; exit 1; }
+
+echo "== 12. callback with forged state is rejected (state mismatch, no session issued)"
+CB=$(curl -s -b "$JAR" "$BASE/auth/google/callback?state=bogus.state&code=x")
+echo "$CB" | grep -q "state mismatch" && echo "forged oauth state rejected OK"
+
 echo "E2E PASS"

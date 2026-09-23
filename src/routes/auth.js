@@ -3,11 +3,22 @@ import { randomHex, sha256Hex, hmacHex, hashPassword, verifyPassword, timingSafe
 import {
   mintState, verifyState, claimsFailureReason, claimsToIdentity, exchangeCode,
 } from "../lib/oauth.js";
+import { makeGoogleJwksVerifier } from "../lib/jwks.js";
 import { createStore } from "../lib/store.js";
-import { authForm, logoutConfirm } from "../pages.js";
+import { authForm, logoutConfirm, linkStatus } from "../pages.js";
 
-export function makeAuthHandlers(env) {
-  const store = createStore(env.DB);
+// deps: { store, exchange, verifyGoogleToken, fetch } exist only so tests can
+// drive the decision tree without D1 or Google. Production callers
+// (src/index.js) pass nothing; verifyGoogleToken then becomes the live
+// pinned-URL Google JWKS RS256 verifier.
+export function makeAuthHandlers(env, deps = {}) {
+  const store = deps.store ?? createStore(env.DB);
+  const exchange = deps.exchange ?? exchangeCode;
+  // Signature gate for Google id_tokens: fails closed on missing/failed key
+  // fetch, unknown kid, malformed JWT, bad signature. Runs before any claim
+  // is trusted and before any identity/session work.
+  const verifyGoogleToken = deps.verifyGoogleToken
+    ?? makeGoogleJwksVerifier({ fetchImpl: deps.fetch }).verify;
 
   async function userFromRequest(request) {
     const token = parseCookies(request).bf_session;
@@ -41,34 +52,22 @@ export function makeAuthHandlers(env) {
       ? value : "";
   }
 
-  // Identity links are idempotent under concurrent callbacks: a UNIQUE
-  // violation means another request linked first — re-find and proceed.
-  async function linkIdentity(provider, providerUid, userId, email) {
-    try {
-      await store.identities.create(provider, providerUid, userId, email);
-    } catch (e) {
-      const known = await store.identities.find(provider, providerUid);
-      if (!known) throw e;
-      return known.user_id;
-    }
-    return userId;
-  }
-
   function ssoConfigured() {
     return Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
   }
 
+  // Shown when a sign-in attempt's verified Google email matches an account
+  // it is NOT linked to. Matching email alone never links and never signs in.
+  function emailTakenNotice() {
+    return html(authForm("login", {
+      error: "An account with that email already exists. Sign in with your password first, then link Google from your dashboard.",
+      sso: ssoConfigured(),
+    }));
+  }
+
   // ---- Google SSO ----------------------------------------------------------
 
-  async function googleStart(ctx) {
-    if (!ssoConfigured()) {
-      return html(`<h1>Google sign-in not configured</h1>
-        <p class="muted">Set GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET. See
-        <a href="https://github.com/stevekkall-beansgc/beanfit-app/blob/main/GOOGLE-SSO.md">GOOGLE-SSO.md</a>.</p>`,
-        503);
-    }
-    const origin = new URL(ctx.request.url).origin;
-    const { state, nonce } = await mintState(env.SESSION_SECRET, safeNext(ctx.query.get("next")));
+  function googleAuthRedirect(origin, state, nonce) {
     const params = new URLSearchParams({
       client_id: env.GOOGLE_CLIENT_ID,
       redirect_uri: `${origin}/auth/google/callback`,
@@ -84,6 +83,72 @@ export function makeAuthHandlers(env) {
     );
   }
 
+  async function googleStart(ctx) {
+    if (!ssoConfigured()) {
+      return html(`<h1>Google sign-in not configured</h1>
+        <p class="muted">Set GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET. See
+        <a href="https://github.com/stevekkall-beansgc/beanfit-app/blob/main/GOOGLE-SSO.md">GOOGLE-SSO.md</a>.</p>`,
+        503);
+    }
+    const origin = new URL(ctx.request.url).origin;
+    const { state, nonce } = await mintState(env.SESSION_SECRET, safeNext(ctx.query.get("next")));
+    return googleAuthRedirect(origin, state, nonce);
+  }
+
+  // Explicit linking initiation. The route table owns the auth gate
+  // (POST /auth/google/link = "required"); CSRF is enforced here. The minted
+  // state binds the eventual callback to THIS user + THIS session credential.
+  async function googleLinkStart(ctx) {
+    if (!ssoConfigured()) {
+      return html("<p>Google sign-in is not configured.</p>", 503);
+    }
+    // Fail closed if invoked without a resolved session (route flag normally
+    // guarantees this; a null user must never mint link-bound state).
+    if (!ctx.user) return html("<p>Invalid request.</p>", 400);
+    if (!await assertCsrf(ctx.request, ctx.form ?? {}))
+      return html("<p>Invalid request.</p>", 400);
+    const sessionToken = parseCookies(ctx.request).bf_session;
+    if (!sessionToken) return html("<p>Invalid request.</p>", 400);
+    const origin = new URL(ctx.request.url).origin;
+    const { state, nonce } = await mintState(
+      env.SESSION_SECRET, "/dashboard?linked=google", 600,
+      { uid: ctx.user.id, sid: await sha256Hex(sessionToken) },
+    );
+    return googleAuthRedirect(origin, state, nonce);
+  }
+
+  // Completes a link-mode callback. Every failure is fail-closed: no
+  // identity row is written, no session is issued or changed.
+  async function completeGoogleLink(ctx, identity, state) {
+    const bound = state.link;
+    const fail = (message) => html(linkStatus(false, message, ctx.user ?? null), 403);
+
+    const sessionToken = parseCookies(ctx.request).bf_session;
+    if (!ctx.user || !sessionToken)
+      return fail("Linking requires your signed-in session. Start again from your dashboard.");
+    const sid = await sha256Hex(sessionToken);
+    if (!timingSafeEqual(sid, bound.sid) || !timingSafeEqual(ctx.user.id, bound.uid))
+      return fail("Your session changed during linking. Start again from your dashboard.");
+
+    const known = await store.identities.find(identity.provider, identity.uid);
+    if (known && known.user_id !== bound.uid)
+      return fail("That Google account is already linked to a different account.");
+    if (!known) {
+      try {
+        await store.identities.create(
+          identity.provider, identity.uid, bound.uid, identity.email);
+      } catch {
+        // UNIQUE race: someone linked this identity first — re-find and
+        // accept only if it landed on the same bound user; otherwise reject.
+        const raced = await store.identities.find(identity.provider, identity.uid);
+        if (!raced) return fail("Could not link that Google account. Try again.");
+        if (raced.user_id !== bound.uid)
+          return fail("That Google account is already linked to a different account.");
+      }
+    }
+    return redirect(state.path || "/dashboard");
+  }
+
   async function googleCallback(ctx) {
     if (!ssoConfigured()) return html("<p>Google sign-in is not configured.</p>", 503);
     const url = new URL(ctx.request.url);
@@ -96,14 +161,14 @@ export function makeAuthHandlers(env) {
     if (!cookieState || !timingSafeEqual(cookieState, queryState)) {
       return html(authForm("login", { error: "Sign-in could not be verified (state mismatch). Try again.", sso: ssoConfigured() }));
     }
-    const verified = await verifyState(env.SESSION_SECRET, queryState);
-    if (!verified) return html(authForm("login", { error: "Sign-in expired. Try again.", sso: ssoConfigured() }));
+    const state = await verifyState(env.SESSION_SECRET, queryState);
+    if (!state) return html(authForm("login", { error: "Sign-in expired. Try again.", sso: ssoConfigured() }));
 
     const code = ctx.query.get("code");
     if (!code) return html(authForm("login", { error: "Missing authorization code.", sso: ssoConfigured() }));
 
     const origin = url.origin;
-    const { status, body } = await exchangeCode(
+    const { status, body } = await exchange(
       { clientId: env.GOOGLE_CLIENT_ID, clientSecret: env.GOOGLE_CLIENT_SECRET },
       code, `${origin}/auth/google/callback`,
     );
@@ -111,30 +176,40 @@ export function makeAuthHandlers(env) {
       console.error("token exchange failed", status, body.error ?? "");
       return html(authForm("login", { error: "Google sign-in failed. Try again.", sso: ssoConfigured() }));
     }
-    let claims;
-    try { claims = JSON.parse(atob(body.id_token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))); }
-    catch { return html(authForm("login", { error: "Invalid token from Google.", sso: ssoConfigured() })); }
-    const reason = claimsFailureReason(claims, env.GOOGLE_CLIENT_ID, verified.nonce);
+
+    // Signature gate BEFORE any claim is trusted and BEFORE any identity or
+    // session work: verified token payload or fail closed. Google's RS256
+    // key material comes only from the pinned discovery/JWKS endpoints.
+    const jwt = await verifyGoogleToken(body.id_token);
+    if (!jwt.ok) {
+      console.error("google token rejected:", jwt.reason);
+      return html(authForm("login", { error: "Google sign-in failed validation. Try again.", sso: ssoConfigured() }));
+    }
+    const reason = claimsFailureReason(jwt.claims, env.GOOGLE_CLIENT_ID, state.nonce);
     if (reason) {
       console.error("google claims rejected:", reason);
       return html(authForm("login", { error: "Google sign-in failed validation. Try again.", sso: ssoConfigured() }));
     }
-    const identity = claimsToIdentity(claims);
+    const identity = claimsToIdentity(jwt.claims);
 
-    // 1. Known identity → straight in.
+    // Explicit linking flow: state was minted by POST /auth/google/link,
+    // bound to one authenticated session. Complete only for that session.
+    if (state.link) return completeGoogleLink(ctx, identity, state);
+
+    // Sign-in flow.
+    // 1. Known identity → straight in (already-linked Google sign-in).
     const known = await store.identities.find(identity.provider, identity.uid);
-    if (known) return startSession(known.user_id, verified.path);
+    if (known) return startSession(known.user_id, state.path);
 
-    // 2. Same email → link identity to the existing account.
-    const byEmail = await store.users.byEmail(identity.email);
-    if (byEmail) {
-      const linkedId = await linkIdentity(identity.provider, identity.uid, byEmail.id, identity.email);
-      return startSession(linkedId, verified.path);
-    }
+    // 2. Same email does NOT link and does NOT sign in. Fail closed and
+    //    point at the explicit, session-bound linking path instead of taking
+    //    the existing account over.
+    if (await store.users.byEmail(identity.email)) return emailTakenNotice();
 
     // 3. New user (passwordless — Google owns the credential). One atomic
-    // write; a UNIQUE(email) race re-runs the find/link ladder instead of
-    // leaving a half-created account.
+    //    write; a UNIQUE race re-checks identity first (a concurrent callback
+    //    for THIS identity may have won), then email — never linking on
+    //    email match alone.
     const userId = randomHex(16);
     try {
       await store.users.createWithIdentity(
@@ -142,15 +217,13 @@ export function makeAuthHandlers(env) {
         { provider: identity.provider, providerUid: identity.uid, userId, emailAtLink: identity.email },
       );
     } catch (e) {
-      const existing = await store.users.byEmail(identity.email);
-      if (!existing) {
-        console.error("signup create failed", e);
-        return html(authForm("login", { error: "Could not create your account. Try again.", sso: ssoConfigured() }));
-      }
-      const linkedId = await linkIdentity(identity.provider, identity.uid, existing.id, identity.email);
-      return startSession(linkedId, verified.path || "/dashboard");
+      const won = await store.identities.find(identity.provider, identity.uid);
+      if (won) return startSession(won.user_id, state.path || "/dashboard");
+      if (await store.users.byEmail(identity.email)) return emailTakenNotice();
+      console.error("signup create failed", e);
+      return html(authForm("login", { error: "Could not create your account. Try again.", sso: ssoConfigured() }));
     }
-    return startSession(userId, verified.path || "/dashboard");
+    return startSession(userId, state.path || "/dashboard");
   }
 
   return {
@@ -158,6 +231,7 @@ export function makeAuthHandlers(env) {
     csrfFor,
     assertCsrf,
     googleStart,
+    googleLinkStart,
     googleCallback,
 
     async signupPage(ctx) {

@@ -36,6 +36,12 @@ export function createStore(db) {
         "INSERT INTO user_identities (provider, provider_uid, user_id, email_at_link) VALUES (?, ?, ?, ?)"
       ).bind(provider, providerUid, userId, emailAtLink).run();
     },
+    async byUser(userId) {
+      const { results } = await db.prepare(
+        "SELECT provider, provider_uid, email_at_link, created_at FROM user_identities WHERE user_id = ? ORDER BY created_at"
+      ).bind(userId).all();
+      return results ?? [];
+    },
   };
 
   const sessions = {

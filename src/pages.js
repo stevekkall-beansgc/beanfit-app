@@ -130,7 +130,8 @@ export function authForm(mode, { error = "", email = "", next = "", sso = false 
        : `New here? <a href="/signup${q}">Create an account</a>.`}</p>`);
 }
 
-export function dashboard(user, devices) {
+export function dashboard(user, devices, opts = {}) {
+  const { csrf = "", googleLinked = false, sso = false, notice = "" } = opts;
   const cards = devices.map(d => `
     <a href="/devices/${esc(d.id)}" style="text-decoration:none;color:inherit">
       <div class="card" style="margin:0">
@@ -208,11 +209,40 @@ $ PYTHONPATH=src python3 -m beanfit register  <button class="secondary" id="copy
     })();
     </script>`;
 
+  const account = `
+    <div class="card">
+      <h2 style="margin-top:0">Account</h2>
+      ${notice ? `<p><span class="badge ok">${esc(notice)}</span></p>` : ""}
+      <p class="muted">Signed in as ${esc(user.email)}.</p>
+      ${sso ? (googleLinked
+        ? `<p class="muted">Google: <span class="badge ok">linked</span> — you can sign in with Google.</p>`
+        : `<p class="muted">Google: <span class="badge warn">not linked</span></p>
+           <form method="post" action="/auth/google/link">
+             <input type="hidden" name="csrf" value="${esc(csrf)}">
+             <button>Link Google account</button>
+           </form>
+           <p class="muted">Linking confirms ownership with Google while you're signed in.
+           A matching email never links an account on its own.</p>`)
+      : ""}
+    </div>`;
+
   return layout("Your devices",
     `<h1>Your devices</h1>
      ${devices.length ? `<div class="grid">${cards}</div>` : emptyState}
      ${devices.length ? `<p class="muted">To register another machine, run
-       <code>git clone https://github.com/stevekkall-beansgc/beanfit &amp;&amp; cd beanfit &amp;&amp; PYTHONPATH=src python3 -m beanfit register</code> on it.</p>` : ""}`, user);
+       <code>git clone https://github.com/stevekkall-beansgc/beanfit &amp;&amp; cd beanfit &amp;&amp; PYTHONPATH=src python3 -m beanfit register</code> on it.</p>` : ""}
+     ${account}`, user);
+}
+
+// Result page for the explicit Google-linking callback (fail-closed paths and
+// anything that should not drop a signed-in user on the login form).
+export function linkStatus(ok, message, user = null) {
+  return layout(ok ? "Google linked" : "Google link",
+    `<h1>${ok ? "Google account linked" : "Could not link Google"}</h1>
+     <div class="card">
+       <p>${esc(message)}</p>
+       <p><a class="btn" href="/dashboard">Back to dashboard</a></p>
+     </div>`, user);
 }
 
 export function pairConfirm(user, device, csrf, recsPayload) {

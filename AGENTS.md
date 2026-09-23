@@ -28,6 +28,13 @@ build step; plain JS string templates with strict escaping.
 - Security posture: tokens stored hashed at rest; raw token exists only
   inside the approval UPDATE and the CLI handoff. Do not reintroduce
   persistence of raw credentials.
+- Account linking is explicit only: never link a Google (or any) identity to
+  an existing account by email match alone. Linking requires the authenticated
+  session + CSRF initiation with OAuth state bound to that session.
+- Google id_tokens are trusted only after RS256 signature verification
+  against key material from the pinned Google discovery/JWKS endpoints
+  (src/lib/jwks.js, fail closed). Claims validation and identity/session/link
+  resolution never run for an unverified or unsigned token.
 - `fit.js` mirrors beanfit's Python engine constants — changes must land in
   both repos together (conformance pin pending, audit X5).
 

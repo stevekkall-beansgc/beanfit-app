@@ -14,7 +14,7 @@ test("createStore exposes every repository (regression: identities was missing)"
     assert.ok(store[repo], `${repo} missing from store`);
   }
   // every method used by routes exists
-  for (const fn of ["find", "create"]) {
+  for (const fn of ["find", "create", "byUser"]) {
     assert.equal(typeof store.identities[fn], "function");
   }
 });

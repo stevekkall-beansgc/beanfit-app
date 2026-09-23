@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   mintState, verifyState, claimsFailureReason, claimsToIdentity,
 } from "../src/lib/oauth.js";
+import { hmacHex } from "../src/lib/crypto.js";
 
 const SECRET = "unit-test-secret";
 
@@ -30,6 +31,30 @@ test("state drops unsafe redirect paths", async () => {
     const out = await verifyState(SECRET, state);
     assert.equal(out.path, "");
   }
+});
+
+test("state carries an explicit link binding and round-trips", async () => {
+  const { state, nonce } = await mintState(SECRET, "/dashboard", 600, { uid: "u1", sid: "sid-hash" });
+  const out = await verifyState(SECRET, state);
+  assert.equal(out?.nonce, nonce);
+  assert.deepEqual(out.link, { uid: "u1", sid: "sid-hash" });
+});
+
+test("plain sign-in state has no link binding", async () => {
+  const { state } = await mintState(SECRET, "/login");
+  assert.equal((await verifyState(SECRET, state)).link, null);
+});
+
+test("link binding is omitted when the binding is malformed (not half-written)", async () => {
+  const { state } = await mintState(SECRET, "", 600, { uid: "", sid: "x" });
+  assert.equal((await verifyState(SECRET, state)).link, null);
+});
+
+test("a forged link binding with a valid signature fails closed", async () => {
+  const payload = Buffer.from(JSON.stringify({ n: "n", x: 9999999999, p: "/dashboard", l: { u: "u1" } })).toString("base64url");
+  const forged = `${payload}.${await hmacHex(SECRET, `state:${payload}`)}`;
+  const out = await verifyState(SECRET, forged);
+  assert.equal(out, null, "partial binding (missing sid) must reject the whole state");
 });
 
 const CLIENT = "test-client-id";
@@ -71,4 +96,29 @@ test("missing nonce in id_token is rejected (regression: nonce must be sent)", (
   const noNonce = claims();
   delete noNonce.nonce;
   assert.match(claimsFailureReason(noNonce, CLIENT, "expected-nonce"), /nonce/);
+});
+
+test("email_verified must be exactly the boolean true (fail closed otherwise)", () => {
+  const nonce = "expected-nonce";
+  for (const v of [false, "true", 1, "True", null]) {
+    const c = claims({ email_verified: v });
+    assert.match(claimsFailureReason(c, CLIENT, nonce), /not verified/, `email_verified=${JSON.stringify(v)} must fail`);
+  }
+  const absent = claims();
+  delete absent.email_verified;
+  assert.match(claimsFailureReason(absent, CLIENT, nonce), /not verified/, "absent email_verified must fail");
+});
+
+test("subject must be a nonempty string (fail closed otherwise)", () => {
+  const nonce = "expected-nonce";
+  for (const sub of ["", 0, 123, null]) {
+    assert.match(
+      claimsFailureReason(claims({ sub }), CLIENT, nonce),
+      /subject/,
+      `sub=${JSON.stringify(sub)} must fail`,
+    );
+  }
+  const absent = claims();
+  delete absent.sub;
+  assert.match(claimsFailureReason(absent, CLIENT, nonce), /subject/, "absent sub must fail");
 });

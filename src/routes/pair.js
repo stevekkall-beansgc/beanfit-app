@@ -18,9 +18,24 @@ export function makePageHandlers(env, auth) {
       return html(landing(ctx.user));
     },
 
-    async dashboard({ user }) {
+    async dashboard(ctx) {
+      const { user } = ctx;
       const devices = await store.devices.listForUser(user.id);
-      return html(dashboard(user, devices));
+      const identities = await store.identities.byUser(user.id);
+      const googleLinked = identities.some(i => i.provider === "google");
+      const sso = Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
+      // The ?linked=google success notice is shown only when THIS user's
+      // Google identity is actually linked; a forged query alone must not
+      // render a false "linked" confirmation.
+      const notice = ctx.query.get("linked") === "google" && googleLinked
+        ? "Google account linked."
+        : "";
+      return html(dashboard(user, devices, {
+        csrf: await auth.csrfFor(ctx.request),
+        googleLinked,
+        sso,
+        notice,
+      }));
     },
 
     async deviceDetail(ctx) {

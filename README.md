@@ -28,6 +28,11 @@ Pairing codes expire in 15 minutes; device credentials are revocable.
   update outbox
 - Sessions: DB-backed bearer tokens in HttpOnly cookies · CSRF via per-session
   HMAC tokens · passwords PBKDF2-SHA256 (100k iterations)
+- Google SSO (see `GOOGLE-SSO.md`): a known Google identity signs in; a new
+  email creates a passwordless account. Linking an existing account to Google
+  is explicit only — an authenticated, CSRF-protected POST on the dashboard,
+  with the OAuth state bound to that exact session. A matching email alone
+  never links or takes over an account.
 - The fit math here (`src/lib/fit.js`) mirrors the CLI engine so drift-watch
   could later re-fit stored devices against new catalog rows without calling
   the CLI; no alert delivery runs in this version

@@ -56,6 +56,7 @@ const ROUTES = [
   ["POST", "/login", (c, h) => h.auth.loginSubmit(c)],
   ["GET", "/auth/google/start", (c, h) => h.auth.googleStart(c)],
   ["GET", "/auth/google/callback", (c, h) => h.auth.googleCallback(c)],
+  ["POST", "/auth/google/link", (c, h) => h.auth.googleLinkStart(c), "required"],
   ["GET", "/logout", (c, h) => h.auth.logoutPage(c), "required"],
   ["POST", "/logout", (c, h) => h.auth.logoutSubmit(c)],
   ["GET", "/dashboard", (c, h) => h.pages.dashboard(c), "required"],
