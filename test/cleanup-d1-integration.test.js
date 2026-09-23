@@ -17,9 +17,7 @@ import worker from "../src/index.js";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SECRET = "integration-maintenance-secret";
 const PATH = "/api/maintenance/retention-cleanup";
-// The handler/cleanup core use the real clock, so seeds must be relative to
-// actual time; a few seconds of drift never flips the <= cutoff boundary.
-const NOW = Math.floor(Date.now() / 1000);
+const NOW = 1_700_000_000;
 const CUTOFF = NOW - 86400; // 24h grace
 
 let DatabaseSync = null;
@@ -125,7 +123,8 @@ function maintenanceRequest(token) {
 }
 
 test("d1-integration: FK on — bounded cleanup deletes stale pending/denied children-first, never approved/revoked",
-  { skip: DI_SKIP }, async () => {
+  { skip: DI_SKIP }, async (t) => {
+    t.mock.method(Date, "now", () => NOW * 1000);
     const env = sqliteDb();
     try {
       env.apply();
