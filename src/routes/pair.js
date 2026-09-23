@@ -84,11 +84,12 @@ export function makePageHandlers(env, auth) {
       const token = await deviceCredential(env, device.id);
       // approve() carries the status='pending' guard; a concurrent approver
       // wins the row and ours matches zero rows — never overwrite their token.
-      const res = await store.devices.approve(device.id, ctx.user.id, await sha256Hex(token));
+      const label = String(form.label || device.label).slice(0, 64);
+      const res = await store.devices.approve(device.id, ctx.user.id, await sha256Hex(token), label);
       if (!res?.meta?.changes)
         return html(pairDone(false, "Invalid or expired code. Run `beanfit register` again.", ctx.user));
       return html(pairDone(true,
-        `"${(form.label || device.label).slice(0, 64)}" is registered. Your terminal now has your recommendations.`, ctx.user));
+        `"${label}" is registered. Your terminal now has your recommendations.`, ctx.user));
     },
 
     async revokeDevice(ctx) {

@@ -98,11 +98,11 @@ export function createStore(db) {
     },
     // Single guarded transition: claim + token land atomically, so the CLI
     // can never poll an approved row whose token has not been written yet.
-    async approve(deviceId, userId, tokenHash) {
+    async approve(deviceId, userId, tokenHash, label) {
       return db.prepare(
-        "UPDATE devices SET user_id = ?, status = 'approved', approved_at = datetime('now')," +
+        "UPDATE devices SET user_id = ?, label = ?, status = 'approved', approved_at = datetime('now')," +
         " device_token_hash = ? WHERE id = ? AND status = 'pending'"
-      ).bind(userId, tokenHash, deviceId).run();
+      ).bind(userId, label, tokenHash, deviceId).run();
     },
     async denyPending(deviceId) {
       return db.prepare("UPDATE devices SET status = 'denied' WHERE id = ? AND status = 'pending'")

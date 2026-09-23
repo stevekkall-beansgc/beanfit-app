@@ -50,16 +50,17 @@ test("pendingByCode encodes the whole pairing-liveness rule in SQL", async () =>
   assert.deepEqual(args, ["ABCD2345", 1000]);
 });
 
-test("approve claims only a credential hash under the pending guard", async () => {
+test("approve claims only a credential hash and persists label under the pending guard", async () => {
   const { db, calls } = recordingDb();
   const store = createStore(db);
-  await store.devices.approve("dev1", "usr1", "hash123");
+  await store.devices.approve("dev1", "usr1", "hash123", "My Device");
   const { sql, args } = calls.at(-1);
   assert.match(sql, /status = 'approved'/);
+  assert.match(sql, /label = \?/);
   assert.match(sql, /device_token_hash = \?/);
   assert.doesNotMatch(sql, /device_token = \?/, "raw tokens must never be persisted");
   assert.match(sql, /status = 'pending'/, "guard must stay");
-  assert.deepEqual(args, ["usr1", "hash123", "dev1"]);
+  assert.deepEqual(args, ["usr1", "My Device", "hash123", "dev1"]);
 });
 
 test("setRawToken/setLastSeen are gone (approval is one statement)", () => {
