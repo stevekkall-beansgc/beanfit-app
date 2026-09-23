@@ -11,12 +11,14 @@ what turns a one-shot CLI answer into an ongoing relationship.
    pairing code. Approve it on the web — you see exactly what gets stored
    before you approve.
 3. **Get your stack**: the device page holds your recommendation snapshot
-   (model × quant × runtime with honest uncertainty bands). Registered
-   devices are how beanfit reaches you when a better model fits your machine.
+   (model × quant × runtime with honest uncertainty bands). Automatic
+   update alerts are planned, not delivered by this version.
 
-Privacy stance: detection runs locally; only the profile shown at approval is
-transmitted; pairing codes expire in 15 minutes; device credentials are
-revocable.
+Privacy stance: detection runs locally, but the sanitized hardware profile and
+recommendation snapshot are transmitted and stored as a pending record when
+pairing starts, *before* web approval. Approval attaches that record to an
+account. Denied or expired pending records are not automatically deleted yet.
+Pairing codes expire in 15 minutes; device credentials are revocable.
 
 ## Architecture ($0 by design)
 
@@ -25,9 +27,10 @@ revocable.
 - **D1** (SQLite) for users / sessions / devices / recommendations / catalog /
   update outbox
 - Sessions: DB-backed bearer tokens in HttpOnly cookies · CSRF via per-session
-  HMAC tokens · passwords PBKDF2-SHA256 (120k iters)
+  HMAC tokens · passwords PBKDF2-SHA256 (100k iterations)
 - The fit math here (`src/lib/fit.js`) mirrors the CLI engine so drift-watch
-  can re-fit stored devices against new catalog rows without calling the CLI
+  could later re-fit stored devices against new catalog rows without calling
+  the CLI; no alert delivery runs in this version
 
 ```
 CLI (beanfit register)          Web app
@@ -50,11 +53,14 @@ BEANFIT_SRC=../beanfit/src node scripts/sync_catalog.js         # load catalog
 npm run dev                                                      # :8787
 node --test                                                      # unit tests
 ./scripts/e2e-dev.sh                                             # full pairing E2E
+npm run test:e2e                 # script regression, then supervised E2E with disposable local D1 and pinned Wrangler
+bash test/e2e-local.test.sh      # script regression alone: isolation + failure propagation
 ```
 
 ## Deploying
 
-See [DEPLOY.md](DEPLOY.md). Still $0 on Cloudflare free tiers at pilot scale.
+See [DEPLOY.md](DEPLOY.md). Verify current Cloudflare limits and costs before
+deploying a pilot.
 
 ---
 
