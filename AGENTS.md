@@ -10,7 +10,9 @@ build step; plain JS string templates with strict escaping.
   stack configurator).
 - `src/lib/` — `store.js` (D1 repos), `oauth.js`/`crypto.js`/`http.js`,
   `stack.js` (generator), `fit.js` (JS mirror of beanfit's engine math),
-  `plain.js` (human-language translation layer).
+  `plain.js` (human-language translation layer), `cleanup.js` (inert D1
+  retention core for stale pairing records — cleanups are invoked ONLY by a
+  bean-sched job; wiring it is an open follow-up, see README).
 
 ## Test commands
 - Unit: `npm test`
@@ -20,6 +22,9 @@ build step; plain JS string templates with strict escaping.
   carries SESSION_SECRET + dummy Google creds so SSO buttons render.
 
 ## Guardrails
+- Bean one-clock rule: bean-sched owns ALL recurring scheduling. Never add a
+  Cloudflare cron trigger, `scheduled` handler, GitHub cron, or any other
+  timer to this app.
 - XSS discipline: every interpolated value passes `esc()`. New renderers
   inherit this or the PR is rejected.
 - Auth gates: route-table flags own authentication. Handlers never re-check.

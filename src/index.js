@@ -1,6 +1,8 @@
 import { makeAuthHandlers } from "./routes/auth.js";
 import { makePageHandlers, makePairApiHandlers } from "./routes/pair.js";
+import { makeMaintenanceHandlers } from "./routes/maintenance.js";
 import { html } from "./lib/http.js";
+import { timingSafeEqual } from "./lib/crypto.js";
 
 export default {
   async fetch(request, env) {
@@ -9,6 +11,7 @@ export default {
       const auth = makeAuthHandlers(env);
       const pages = makePageHandlers(env, auth);
       const api = makePairApiHandlers(env);
+      const maintenance = makeMaintenanceHandlers(env);
 
       const ctx = {
         request,
@@ -32,7 +35,10 @@ export default {
           new URL(`/login?next=${encodeURIComponent(url.pathname)}`, url.origin), 303,
         );
       }
-      return route.handler.call(null, ctx, { auth, pages, api });
+      if (route.auth === "bearer" && !authorizedMaintenanceBearer(request, env)) {
+        return new Response("Unauthorized", { status: 401, headers: { "cache-control": "no-store" } });
+      }
+      return route.handler.call(null, ctx, { auth, pages, api, maintenance });
     } catch (err) {
       console.error("unhandled", err?.stack ?? err);
       if (url.pathname.startsWith("/api/")) {
@@ -70,6 +76,11 @@ const ROUTES = [
   ["POST", "/api/pair/start", (c, h) => h.api.start(c)],
   ["GET", "/api/pair/status/:pairId", (c, h) => h.api.status(c)],
   ["GET", "/api/pair/claim/:pairId", (c, h) => h.api.claim(c)],
+  // Maintenance is bearer-gated here (route-table flag), never a browser
+  // session or CSRF. INACTIVE until env.RETENTION_CLEANUP_TOKEN is provisioned
+  // and a bean-sched job is registered: without the secret the gate fails
+  // closed. bean-sched owns ALL recurring scheduling.
+  ["POST", "/api/maintenance/retention-cleanup", (c, h) => h.maintenance.retentionCleanup(c), "bearer"],
 ];
 
 function match(pathname, method) {
@@ -87,4 +98,19 @@ function match(pathname, method) {
     if (hit) return { handler, auth, params };
   }
   return null;
+}
+
+// "bearer" auth mode guard for maintenance routes. Route-table flags own
+// authentication, so this runs BEFORE any handler. Fails closed: an absent
+// or empty RETENTION_CLEANUP_TOKEN can never authorize, even if the caller
+// presents the exact value a future provisioning would use. Comparison is
+// timing-safe and this function never logs or returns the credential.
+function authorizedMaintenanceBearer(request, env) {
+  const expected = typeof env.RETENTION_CLEANUP_TOKEN === "string"
+    ? env.RETENTION_CLEANUP_TOKEN
+    : "";
+  if (expected === "") return false;
+  const header = request.headers.get("authorization") ?? "";
+  const m = /^Bearer\s+(.+)$/i.exec(header);
+  return m ? timingSafeEqual(m[1].trim(), expected) : false;
 }

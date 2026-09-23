@@ -17,8 +17,30 @@ what turns a one-shot CLI answer into an ongoing relationship.
 Privacy stance: detection runs locally, but the sanitized hardware profile and
 recommendation snapshot are transmitted and stored as a pending record when
 pairing starts, *before* web approval. Approval attaches that record to an
-account. Denied or expired pending records are not automatically deleted yet.
-Pairing codes expire in 15 minutes; device credentials are revocable.
+account. Pairing codes expire in 15 minutes; device credentials are revocable.
+
+## Retention cleanup: core + bearer-gated endpoint — NOT active
+
+A bounded cleanup core exists for stale, unclaimed pairing records
+(`src/lib/cleanup.js`), and a **bearer-gated `POST /api/maintenance/retention-cleanup` endpoint is implemented** (`src/routes/maintenance.js`), but **nothing invokes it yet, so no retention guarantee is live**. Rows accumulate exactly as before this worktree.
+
+The policy implemented (but inert) in this worktree: a device row with
+status `pending` or `denied` may be deleted once `pair_expires_at` is at least
+24 hours old; `approved` and `revoked` rows are never touched, and rows with a
+NULL `pair_expires_at` are never eligible. The core is bounded (hard cap of
+100 candidate rows per invocation), idempotent, parameterized by the current
+unix time, deletes child `recommendations`/`outbound_updates` rows before their
+devices inside one D1 batch, re-asserts eligibility in every DELETE (safe under
+races), fetches only device ids, and never logs — so no credential material can
+leak to worker logs.
+
+Activating it is **deferred**: this app deliberately has no Cloudflare
+`triggers.crons`, no `scheduled` handler, and **no other HTTP route for cleanup**.
+The bearer-gated endpoint exists but requires **three things** before it becomes
+live: (1) `RETENTION_CLEANUP_TOKEN` provisioned in the environment, (2) a
+**bean-sched schedule registered** to call it on a cron, and (3) deployment of
+both. Bean-sched owns all recurring scheduling (Bean one-clock rule). Until all
+three are in place, do not rely on stale pairings disappearing.
 
 ## Architecture ($0 by design)
 
