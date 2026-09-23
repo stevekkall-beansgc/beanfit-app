@@ -23,6 +23,25 @@ trap cleanup EXIT
 cat > "$STUB_DIR/curl" <<'STUB'
 #!/usr/bin/env bash
 set -euo pipefail
+header_path() {
+  local previous="" arg
+  for arg in "$@"; do
+    if [ "$previous" = "-D" ]; then
+      printf '%s' "$arg"
+      return 0
+    fi
+    previous="$arg"
+  done
+  return 1
+}
+write_headers() {
+  local path="$1" content_type="$2" csp="${3:-}"
+  {
+    printf 'Content-Type: %s\r\n' "$content_type"
+    [ -z "$csp" ] || printf 'Content-Security-Policy: %s\r\n' "$csp"
+    printf 'X-Content-Type-Options: nosniff\r\n\r\n'
+  } > "$path"
+}
 case "${CURL_STUB_MODE:-}" in
   500)
     printf 'stub signup response body\n'
@@ -36,6 +55,21 @@ case "${CURL_STUB_MODE:-}" in
   hang)
     case "${*: -1}" in
       */signup) printf '303\n' ;;
+      */dashboard)
+        H=$(header_path "$@")
+        write_headers "$H" "text/html; charset=utf-8" "default-src 'none'; base-uri 'none'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self'; script-src-attr 'none'; style-src 'unsafe-inline'"
+        printf '<script src="/assets/register.js" defer></script>\n200\n'
+        ;;
+      */assets/register.js)
+        H=$(header_path "$@")
+        write_headers "$H" "application/javascript; charset=utf-8"
+        printf 'function registerBrowser() { document.getElementById("register-browser"); }\n200\n'
+        ;;
+      */assets/configurator.js)
+        H=$(header_path "$@")
+        write_headers "$H" "application/javascript; charset=utf-8"
+        printf 'function configureDevice() { var root = {}; root.getAttribute("data-device-id"); }\n200\n'
+        ;;
       */pair/ABCD2345) printf 'Pair this device? <input name="csrf" value="abc123">\n200\n' ;;
       */pair/ABCD2345/approve) printf 'is registered.\n200\n' ;;
       *) printf 'unexpected curl URL\n' >&2; exit 99 ;;

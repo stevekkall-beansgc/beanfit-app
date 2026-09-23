@@ -1,6 +1,7 @@
 import { makeAuthHandlers } from "./routes/auth.js";
 import { makePageHandlers, makePairApiHandlers } from "./routes/pair.js";
 import { makeMaintenanceHandlers } from "./routes/maintenance.js";
+import { makeAssetHandlers } from "./routes/assets.js";
 import { html } from "./lib/http.js";
 import { timingSafeEqual } from "./lib/crypto.js";
 
@@ -12,6 +13,7 @@ export default {
       const pages = makePageHandlers(env, auth);
       const api = makePairApiHandlers(env);
       const maintenance = makeMaintenanceHandlers(env);
+      const assets = makeAssetHandlers();
 
       const ctx = {
         request,
@@ -38,7 +40,7 @@ export default {
       if (route.auth === "bearer" && !authorizedMaintenanceBearer(request, env)) {
         return new Response("Unauthorized", { status: 401, headers: { "cache-control": "no-store" } });
       }
-      return route.handler.call(null, ctx, { auth, pages, api, maintenance });
+      return route.handler.call(null, ctx, { auth, pages, api, maintenance, assets });
     } catch (err) {
       console.error("unhandled", err?.stack ?? err);
       if (url.pathname.startsWith("/api/")) {
@@ -55,6 +57,8 @@ export default {
 };
 
 const ROUTES = [
+  ["GET", "/assets/register.js", (c, h) => h.assets.register()],
+  ["GET", "/assets/configurator.js", (c, h) => h.assets.configurator()],
   ["GET", "/", (c, h) => h.pages.landing(c)],
   ["GET", "/signup", (c, h) => h.auth.signupPage(c)],
   ["POST", "/signup", (c, h) => h.auth.signupSubmit(c)],

@@ -98,8 +98,9 @@ export function landing(user = null) {
         ? `<p><a href="/dashboard"><button>Go to your devices</button></a></p>`
         : `<p><a href="/signup"><button>Create your account</button></a></p>`}
      </div>
-     <p class="muted">Hardware detection runs locally. We store the profile you see when you
-     approve pairing — nothing else. No telemetry without a paired device.</p>`, user);
+     <p class="muted">Hardware detection runs locally. Pairing transmits the sanitized hardware
+     profile and any supplied recommendation snapshot to this app, which stores them as a pending
+     record before you approve it. Approval links that pending record to your account.</p>`, user);
 }
 
 // One renderer for both auth forms. Named args — positional optionals let
@@ -155,59 +156,7 @@ $ PYTHONPATH=src python3 -m beanfit register  <button class="secondary" id="copy
       <p class="muted">You'll get a pairing code to approve here — same as the quick path,
       but with exact hardware and full recommendations.</p>
     </div>
-    <script>
-    (function () {
-      function detectGPU() {
-        try {
-          var c = document.createElement("canvas");
-          var gl = c.getContext("webgl") || c.getContext("experimental-webgl");
-          if (!gl) return null;
-          var ext = gl.getExtension("WEBGL_debug_renderer_info");
-          return ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)
-                     : gl.getParameter(gl.RENDERER);
-        } catch (e) { return null; }
-      }
-      function parseChip(raw) {
-        var m = /Apple M(\d+)(?:\s*(Pro|Max|Ultra))?/.exec(raw || "");
-        return m ? { chip: m[0], family: "M" + m[1], variant: m[2] || "" } : null;
-      }
-      var btn = document.getElementById("register-browser");
-      if (btn) btn.addEventListener("click", function () {
-        var status = document.getElementById("register-status");
-        btn.disabled = true;
-        var raw = detectGPU() || navigator.platform || "unknown device";
-        var chip = parseChip(raw);
-        var ram = navigator.deviceMemory ? Number(navigator.deviceMemory) : null;
-        var payload = {
-          label: chip ? chip.chip : String(raw).slice(0, 40),
-          profile: { hardware: {
-            os: "browser", arch: /Mac/.test(navigator.platform) ? "apple_silicon?" : "other",
-            backend: "unknown",
-            chip: chip ? chip.chip : String(raw).slice(0, 60),
-            family: chip ? chip.family : "",
-            variant: chip ? chip.variant : "",
-            ram_gib: ram, metal_cap_gib: null, model_budget_gib: null,
-            mem_bandwidth_gbs: null, bw_source: "browser_estimate"
-          }}
-        };
-        status.textContent = "Creating pairing request…";
-        fetch("/api/pair/start", {
-          method: "POST", headers: { "content-type": "application/json" },
-          body: JSON.stringify(payload)
-        }).then(function (r) { return r.json(); }).then(function (doc) {
-          if (doc.code) window.location = "/pair/" + doc.code;
-          else { status.textContent = "Could not start pairing (" + (doc.error || "?") + ")"; btn.disabled = false; }
-        }).catch(function () {
-          status.textContent = "Network error — try again."; btn.disabled = false;
-        });
-      });
-      var copy = document.getElementById("copy-cmds");
-      if (copy) copy.addEventListener("click", function () {
-        navigator.clipboard.writeText("git clone https://github.com/stevekkall-beansgc/beanfit && cd beanfit && PYTHONPATH=src python3 -m beanfit register");
-        copy.textContent = "copied";
-      });
-    })();
-    </script>`;
+    <script src="/assets/register.js" defer></script>`;
 
   const account = `
     <div class="card">
@@ -358,7 +307,7 @@ export function stackForm(device, rec) {
       <input type="checkbox" name="surf" value="${id}" ${i === 0 ? "checked" : ""} style="width:auto;margin-right:8px">
       ${esc(s.label)} <span class="muted">— ${esc(s.plain)}</span>
     </label>`).join("");
-  return `<div class="card" id="stack-config">
+  return `<div class="card" id="stack-config" data-device-id="${esc(device.id)}">
     <h2 style="margin-top:0">Build your setup</h2>
     <p class="muted">Tick what you want to do with it — our suggestion comes pre-built, change anything.</p>
     <p><strong>What do you want to do?</strong></p>
@@ -370,42 +319,7 @@ export function stackForm(device, rec) {
     </select>
     <button id="gen-stack" style="margin-top:12px">Generate my setup</button>
     <div id="stack-result" style="margin-top:14px"></div>
-    <script>
-    (function () {
-      var btn = document.getElementById("gen-stack");
-      if (!btn) return;
-      btn.addEventListener("click", function () {
-        var root = document.getElementById("stack-config");
-        var surfaces = Array.prototype.slice.call(
-          root.querySelectorAll('input[name="surf"]:checked')
-        ).map(function (c) { return c.value; });
-        if (!surfaces.length) { alert("Pick at least one thing to do"); return; }
-        var model = root.querySelector('select[name="model"]').value;
-        btn.disabled = true; btn.textContent = "Building…";
-        fetch("/api/devices/${esc(device.id)}/stack", {
-          method: "POST", headers: { "content-type": "application/json" },
-          body: JSON.stringify({ surfaces: surfaces, model_tag: model })
-        }).then(function (r) { return r.text(); }).then(function (frag) {
-          document.getElementById("stack-result").innerHTML = frag;
-          bindCopies();
-          btn.disabled = false; btn.textContent = "Generate my setup";
-        }).catch(function () {
-          var box = document.getElementById("stack-result");
-          if (box) box.innerHTML = '<p class="error">Could not build your setup — check your connection and try again.</p>';
-          btn.disabled = false; btn.textContent = "Generate my setup";
-        });
-      });
-      function bindCopies() {
-        document.querySelectorAll("#stack-result .copy-btn").forEach(function (b) {
-          b.addEventListener("click", function () {
-            navigator.clipboard.writeText(b.getAttribute("data-code"));
-            b.textContent = "copied";
-          });
-        });
-      }
-      bindCopies();
-    })();
-    </script>
+    <script src="/assets/configurator.js" defer></script>
   </div>`;
 }
 

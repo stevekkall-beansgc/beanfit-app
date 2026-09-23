@@ -1,5 +1,17 @@
 // Cookie/body plumbing shared by page and API handlers.
 
+const HTML_CSP = [
+  "default-src 'none'",
+  "base-uri 'none'",
+  "connect-src 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+  "object-src 'none'",
+  "script-src 'self'",
+  "script-src-attr 'none'",
+  "style-src 'unsafe-inline'",
+].join("; ");
+
 export function json(data, status = 200, headers = {}) {
   return new Response(JSON.stringify(data), {
     status,
@@ -33,14 +45,19 @@ export async function readForm(request) {
 }
 
 export function html(body, status = 200, headers = {}) {
-  return new Response(body, {
-    status,
-    headers: {
-      "content-type": "text/html; charset=utf-8",
-      "cache-control": "no-store, must-revalidate",
-      ...headers,
-    },
-  });
+  const responseHeaders = new Headers(headers);
+  responseHeaders.set("content-type", "text/html; charset=utf-8");
+  responseHeaders.set("cache-control", "no-store, must-revalidate");
+  responseHeaders.set("content-security-policy", HTML_CSP);
+  return new Response(body, { status, headers: responseHeaders });
+}
+
+export function javascript(body, status = 200, headers = {}) {
+  const responseHeaders = new Headers(headers);
+  responseHeaders.set("content-type", "application/javascript; charset=utf-8");
+  responseHeaders.set("cache-control", "no-store, must-revalidate");
+  responseHeaders.set("x-content-type-options", "nosniff");
+  return new Response(body, { status, headers: responseHeaders });
 }
 
 export function redirect(location, headers = {}) {

@@ -8,6 +8,7 @@ BEANFIT_SRC="${BEANFIT_SRC:-$HOME/beans/products/beanfit/src}"
 JAR="$(mktemp)"
 HOME_DIR="$(mktemp -d)"
 REGLOG="$(mktemp)"
+HTML_HDR="$(mktemp)"
 REG_PID=""
 
 cleanup() {
@@ -15,7 +16,7 @@ cleanup() {
     kill "$REG_PID" 2>/dev/null || true
     wait "$REG_PID" 2>/dev/null || true
   fi
-  rm -f "$JAR" "$REGLOG" || true
+  rm -f "$JAR" "$REGLOG" "$HTML_HDR" || true
   rm -rf "$HOME_DIR" || true
 }
 
@@ -39,12 +40,86 @@ http_request() {
   fi
 }
 
+EXPECTED_CSP="default-src 'none'; base-uri 'none'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self'; script-src-attr 'none'; style-src 'unsafe-inline'"
+
+header_value() {
+  awk -v wanted="$1" '
+    BEGIN { key = tolower(wanted) ":" }
+    tolower($1) == key {
+      sub(/\r$/, "")
+      sub(/^[^:]*:[[:space:]]*/, "")
+      value = $0
+    }
+    END { if (value != "") print value }
+  ' "$HTML_HDR"
+}
+
+assert_html_security() {
+  local label="$1"
+  local script_src="$2"
+  local csp script_count
+
+  csp=$(header_value content-security-policy)
+  if [ "$csp" != "$EXPECTED_CSP" ]; then
+    echo "FAIL: $label missing or has unexpected CSP"
+    exit 1
+  fi
+  script_count=$(printf '%s' "$HTTP_BODY" | grep -o '<script[^>]*>' | wc -l | tr -d ' ' || true)
+  if [ "$script_count" != "1" ]; then
+    echo "FAIL: $label expected exactly one script tag"
+    exit 1
+  fi
+  if ! printf '%s' "$HTTP_BODY" | grep -F "<script src=\"$script_src\" defer></script>" >/dev/null; then
+    echo "FAIL: $label missing fixed script $script_src"
+    exit 1
+  fi
+  echo "$label CSP and fixed script OK"
+}
+
+assert_javascript_asset() {
+  local label="$1"
+  local path="$2"
+  local required_source="$3"
+  local content_type nosniff
+
+  http_request "$label" "200" -D "$HTML_HDR" "$BASE$path"
+  content_type=$(printf '%s' "$(header_value content-type)" | tr '[:upper:]' '[:lower:]')
+  case "$content_type" in
+    application/javascript*) ;;
+    *)
+      echo "FAIL: $label returned non-JavaScript content type"
+      exit 1
+      ;;
+  esac
+  nosniff=$(printf '%s' "$(header_value x-content-type-options)" | tr '[:upper:]' '[:lower:]')
+  if [ "$nosniff" != "nosniff" ]; then
+    echo "FAIL: $label missing nosniff"
+    exit 1
+  fi
+  if ! node -e 'new Function(process.argv[1])' "$HTTP_BODY" >/dev/null 2>&1; then
+    echo "FAIL: $label body is not parsable JavaScript"
+    exit 1
+  fi
+  if ! printf '%s' "$HTTP_BODY" | grep -F "$required_source" >/dev/null; then
+    echo "FAIL: $label body missing expected fixed behavior"
+    exit 1
+  fi
+  echo "$label JavaScript response OK"
+}
+
 EMAIL="e2e-$(date +%s)@test.local"
 
 echo "== 1. signup $EMAIL"
 http_request "signup" "303" -c "$JAR" -d "email=$EMAIL" \
   -d "password=e2e-password-123" "$BASE/signup"
 echo "signup: $HTTP_STATUS OK"
+
+echo "== CSP guard: empty dashboard and fixed assets"
+: > "$HTML_HDR"
+http_request "dashboard CSP" "200" -b "$JAR" -D "$HTML_HDR" "$BASE/dashboard"
+assert_html_security "dashboard" "/assets/register.js"
+assert_javascript_asset "register asset" "/assets/register.js" 'document.getElementById("register-browser")'
+assert_javascript_asset "configurator asset" "/assets/configurator.js" 'root.getAttribute("data-device-id")'
 
 echo "== 2. start beanfit register (isolated HOME)"
 HOME="$HOME_DIR" BEANFIT_ALLOW_UNSUPPORTED_PLATFORM=1 PYTHONPATH="$BEANFIT_SRC" \
@@ -158,13 +233,15 @@ if ! printf '%s' "$FRAG" | grep -i "opencode" >/dev/null; then
   exit 1
 fi
 echo "configurator surface OK (non-webui content present)"
-http_request "device detail" "200" -b "$JAR" "$BASE/devices/$DEVICE_ID"
+: > "$HTML_HDR"
+http_request "device detail" "200" -b "$JAR" -D "$HTML_HDR" "$BASE/devices/$DEVICE_ID"
 DETAIL="$HTTP_BODY"
 if ! printf '%s' "$DETAIL" | grep -F "Your setup" >/dev/null; then
   echo "FAIL: device detail missing persisted stack content"
   exit 1
 fi
 echo "persisted stack renders OK"
+assert_html_security "device detail" "/assets/configurator.js"
 
 echo "== 8. OAuth cancel page keeps the Google button (passwordless lockout guard)"
 http_request "oauth cancel keeps SSO" "200" -b "$JAR" "$BASE/auth/google/callback?error=access_denied"

@@ -7,17 +7,19 @@ what turns a one-shot CLI answer into an ongoing relationship.
 
 1. **Create an account** in the browser.
 2. **Register your device**: run `beanfit register` in your terminal. The CLI
-   detects hardware and computes recommendations *locally*, then shows you a
-   pairing code. Approve it on the web — you see exactly what gets stored
-   before you approve.
+   detects hardware and computes recommendations *locally*, then starts a
+   pairing request. The app stores the sanitized hardware profile and any
+   supplied recommendation snapshot as a pending record before you approve it.
+   Review that record in the browser, then approve or deny it.
 3. **Get your stack**: the device page holds your recommendation snapshot
    (model × quant × runtime with honest uncertainty bands). Automatic
    update alerts are planned, not delivered by this version.
 
-Privacy stance: detection runs locally, but the sanitized hardware profile and
-recommendation snapshot are transmitted and stored as a pending record when
-pairing starts, *before* web approval. Approval attaches that record to an
-account. Pairing codes expire in 15 minutes; device credentials are revocable.
+Privacy stance: Hardware detection runs locally. Pairing transmits the sanitized
+hardware profile and any supplied recommendation snapshot to this app, which
+stores them as a pending record before you approve it. Approval links that
+pending record to your account. Pairing codes expire in 15 minutes; device
+credentials are revocable.
 
 ## Retention cleanup: core + bearer-gated endpoint — NOT active
 
@@ -46,6 +48,10 @@ three are in place, do not rely on stale pairings disappearing.
 
 - **Cloudflare Workers** (SSR pages + JSON API) — no framework, no client
   build step, plain JS ES modules
+- **CSP**: `script-src 'self'`; browser registration and configuration load
+  from fixed same-origin endpoints backed by checked-in JS modules, so no inline
+  script is authorized. The sole unsafe allowance is `style-src 'unsafe-inline'`,
+  needed by the current shared `<style>` block and `style` attributes.
 - **D1** (SQLite) for users / sessions / devices / recommendations / catalog /
   update outbox
 - Sessions: DB-backed bearer tokens in HttpOnly cookies · CSRF via per-session
