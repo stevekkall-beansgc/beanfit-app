@@ -1,7 +1,9 @@
 # Google SSO setup (one-time, ~10 min, $0)
 
-The GCP side is done except two console-only steps that need your Google
-login. This doc is the exact walkthrough.
+The callback URL for the live Worker is
+<https://beanfit-app.steve-k-kall.workers.dev/auth/google/callback>.
+Check the OAuth client's authorized redirect URIs in Google Cloud before
+relying on Google sign-in; the Worker URL alone does not verify that setup.
 
 ## Already done (2026-08-23)
 
@@ -25,12 +27,12 @@ login. This doc is the exact walkthrough.
 
 1. Credentials → **Create credentials → OAuth client ID**
 2. Type: **Web application**
-3. Authorized redirect URIs — add BOTH:
+3. Authorized redirect URIs — add all three:
 
    ```
    http://localhost:8787/auth/google/callback      ← local dev
    http://127.0.0.1:8787/auth/google/callback      ← local dev (alt host)
-   https://beanfit-app.<YOUR-SUBDOMAIN>.workers.dev/auth/google/callback   ← add after first deploy
+   https://beanfit-app.steve-k-kall.workers.dev/auth/google/callback   ← current live Worker
    ```
 
 4. Create → copy the **Client ID** and **Client secret**.
@@ -50,7 +52,7 @@ gcloud secrets create google-client-secret --project beansgc-beanfit --data-file
 # Local dev (values already placeholdered in .dev.vars — replace them):
 #   .dev.vars:  GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET
 
-# Production (after wrangler login):
+# Production secrets (first-time setup or OAuth client replacement only):
 npx wrangler secret put GOOGLE_CLIENT_ID     # paste client id
 npx wrangler secret put GOOGLE_CLIENT_SECRET # paste client secret
 ```

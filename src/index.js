@@ -4,11 +4,21 @@ import { makeMaintenanceHandlers } from "./routes/maintenance.js";
 import { makeAssetHandlers } from "./routes/assets.js";
 import { html } from "./lib/http.js";
 import { timingSafeEqual } from "./lib/crypto.js";
+import { checkRateLimit } from "./lib/rate-limit.js";
 
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     try {
+      const route = match(url.pathname, request.method === "HEAD" ? "GET" : request.method);
+      if (!route) return new Response("Not found", { status: 404 });
+      if (route.rateLimit) {
+        const limited = await checkRateLimit(
+          request, env, route.rateLimit, url.pathname === "/api/pair/start",
+        );
+        if (limited) return limited;
+      }
+
       const auth = makeAuthHandlers(env);
       const pages = makePageHandlers(env, auth);
       const api = makePairApiHandlers(env);
@@ -23,9 +33,6 @@ export default {
         form: null,
         user: await auth.userFromRequest(request),
       };
-
-      const route = match(url.pathname, request.method === "HEAD" ? "GET" : request.method);
-      if (!route) return new Response("Not found", { status: 404 });
       Object.assign(ctx.params, route.params);
 
       const contentType = request.headers.get("content-type") ?? "";
@@ -61,9 +68,9 @@ const ROUTES = [
   ["GET", "/assets/configurator.js", (c, h) => h.assets.configurator()],
   ["GET", "/", (c, h) => h.pages.landing(c)],
   ["GET", "/signup", (c, h) => h.auth.signupPage(c)],
-  ["POST", "/signup", (c, h) => h.auth.signupSubmit(c)],
+  ["POST", "/signup", (c, h) => h.auth.signupSubmit(c), undefined, "SIGNUP_RATE_LIMITER"],
   ["GET", "/login", (c, h) => h.auth.loginPage(c)],
-  ["POST", "/login", (c, h) => h.auth.loginSubmit(c)],
+  ["POST", "/login", (c, h) => h.auth.loginSubmit(c), undefined, "LOGIN_RATE_LIMITER"],
   ["GET", "/auth/google/start", (c, h) => h.auth.googleStart(c)],
   ["GET", "/auth/google/callback", (c, h) => h.auth.googleCallback(c)],
   ["POST", "/auth/google/link", (c, h) => h.auth.googleLinkStart(c), "required"],
@@ -77,7 +84,7 @@ const ROUTES = [
   ["GET", "/pair/:code", (c, h) => h.pages.pairConfirmRoute(c), "required"],
   ["POST", "/pair/:code/approve", (c, h) => h.pages.pairApprove(c), "required"],
   ["POST", "/pair/:code/deny", (c, h) => h.pages.pairDeny(c), "required"],
-  ["POST", "/api/pair/start", (c, h) => h.api.start(c)],
+  ["POST", "/api/pair/start", (c, h) => h.api.start(c), undefined, "PAIR_START_RATE_LIMITER"],
   ["GET", "/api/pair/status/:pairId", (c, h) => h.api.status(c)],
   ["GET", "/api/pair/claim/:pairId", (c, h) => h.api.claim(c)],
   // Maintenance is bearer-gated here (route-table flag), never a browser
@@ -88,7 +95,7 @@ const ROUTES = [
 ];
 
 function match(pathname, method) {
-  for (const [m, pattern, handler, auth] of ROUTES) {
+  for (const [m, pattern, handler, auth, rateLimit] of ROUTES) {
     if (m !== method) continue;
     const pp = pattern.split("/").filter(Boolean);
     const ap = pathname.split("/").filter(Boolean);
@@ -99,7 +106,7 @@ function match(pathname, method) {
       if (pp[i].startsWith(":")) params[pp[i].slice(1)] = decodeURIComponent(ap[i]);
       else if (pp[i] !== ap[i]) { hit = false; break; }
     }
-    if (hit) return { handler, auth, params };
+    if (hit) return { handler, auth, rateLimit, params };
   }
   return null;
 }

@@ -28,6 +28,7 @@ E2E_DEV_SCRIPT="${E2E_DEV_SCRIPT:-scripts/e2e-dev.sh}"
 DEV_VARS_DUMMY='SESSION_SECRET=e2e-local-dev-secret
 GOOGLE_CLIENT_ID=dummy
 GOOGLE_CLIENT_SECRET=dummy
+ENVIRONMENT=dev
 '
 
 # Fresh disposable state: shared persistence dir + run log, cleaned on exit.
@@ -76,7 +77,8 @@ for f in schema.sql migrations/*.sql; do
 done
 
 # 2. Dev vars (gitignored): dummy session secret + Google creds so the SSO
-#    button renders during the lockout-guard assertion. Created ONLY when
+#    button renders during the lockout-guard assertion, plus explicit local mode.
+#    Created ONLY when
 #    absent. The write is atomic (noclobber redirection): if another process
 #    creates .dev.vars between the check and the write, the redirect fails and
 #    their file wins — we never clobber it and don't claim ownership.
@@ -87,7 +89,7 @@ if [ ! -e .dev.vars ]; then
 fi
 
 # 3. Boot wrangler on the same shared persistence dir; wait for readiness.
-"$WRANGLER_BIN" dev --local --persist-to "$PERSIST" --port "$PORT" >"$LOG" 2>&1 &
+"$WRANGLER_BIN" dev --local --var ENVIRONMENT:dev --persist-to "$PERSIST" --port "$PORT" >"$LOG" 2>&1 &
 WRANGLER_PID=$!
 
 READY=0

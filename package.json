@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev --local",
+    "dev": "wrangler dev --local --var ENVIRONMENT:dev",
     "test": "node --test",
     "test:e2e": "bash test/e2e-dev.test.sh && bash test/e2e-local.test.sh && bash scripts/e2e-local.sh",
     "deploy": "wrangler deploy"

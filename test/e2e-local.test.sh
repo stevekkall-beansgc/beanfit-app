@@ -173,6 +173,10 @@ MISSING_LOCAL="$(grep -cv ' --local ' "$STUB_LOG" || true)"
 [ "$MISSING_LOCAL" = "0" ] \
   && ran "every invocation carried --local" \
   || fail "$MISSING_LOCAL invocation(s) missing --local"
+LOCAL_MODE="$(grep -c '^dev .*--var ENVIRONMENT:dev ' "$STUB_LOG" || true)"
+[ "$LOCAL_MODE" = "1" ] \
+  && ran "dev launch explicitly set ENVIRONMENT=dev" \
+  || fail "expected one dev launch with explicit ENVIRONMENT=dev, saw $LOCAL_MODE"
 TOTAL="$(wc -l < "$STUB_LOG" | tr -d ' ')"
 # schema + 3 migrations + 1 dev
 [ "$TOTAL" = "5" ] \
@@ -225,6 +229,9 @@ fi
 grep -q "SESSION_SECRET=e2e-local-dev-secret" "$STUB_DIR/midrun-dev-vars.txt" \
   && ran "dummy .dev.vars existed during the run" \
   || fail "dummy .dev.vars was not present mid-run"
+grep -q "ENVIRONMENT=dev" "$STUB_DIR/midrun-dev-vars.txt" \
+  && ran "dummy .dev.vars declared explicit local mode" \
+  || fail "dummy .dev.vars did not declare ENVIRONMENT=dev"
 [ ! -e "$FIXTURE/.dev.vars" ] \
   && ran "created dummy .dev.vars removed on exit" \
   || fail "created dummy .dev.vars left behind"
@@ -319,7 +326,7 @@ rm -rf "$T"
 
 echo "== 10. e2e-local.sh: byte-for-byte — appended extra newline survives cleanup"
 REF="$STUB_DIR/ref.dev-vars"
-printf 'SESSION_SECRET=e2e-local-dev-secret\nGOOGLE_CLIENT_ID=dummy\nGOOGLE_CLIENT_SECRET=dummy\n' > "$REF"
+printf 'SESSION_SECRET=e2e-local-dev-secret\nGOOGLE_CLIENT_ID=dummy\nGOOGLE_CLIENT_SECRET=dummy\nENVIRONMENT=dev\n' > "$REF"
 : > "$STUB_LOG"
 : > "$STUB_COUNT"
 if E2E_PORT="$STUB_PORT" WRANGLER_BIN="$STUB_DIR/wrangler-stub.sh" E2E_DEV_SCRIPT="$STUB_DIR/append-newline-e2e-dev.sh" \
