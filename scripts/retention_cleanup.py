@@ -10,6 +10,7 @@ TOKEN_ENV = "RETENTION_CLEANUP_TOKEN"
 ENDPOINT_PATH = "/api/maintenance/retention-cleanup"
 REQUEST_TIMEOUT_SECONDS = 30
 MAX_RESPONSE_BYTES = 64 * 1024
+USER_AGENT = "beanfit-retention/0.4.2"
 COUNT_KEYS = (
     "batches",
     "candidates",
@@ -85,6 +86,7 @@ def main(argv=None):
             headers={
                 "Authorization": f"Bearer {token}",
                 "Accept": "application/json",
+                "User-Agent": USER_AGENT,
             },
         )
         with urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:

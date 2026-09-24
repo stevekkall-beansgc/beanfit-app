@@ -48,8 +48,9 @@ operator contract; it does not register or enable a live job.
 - `scripts/retention_cleanup.py` is a standalone, stdlib-only one-shot HTTPS
   client. It accepts exactly one explicit HTTPS base URL, reads the bearer
   token only from `RETENTION_CLEANUP_TOKEN`, posts to the route with a finite
-  timeout, and prints only a sanitized status and known integer counts. It never
-  accepts a token as a command-line argument or prints a response body.
+  timeout and the stable `beanfit-retention/0.4.2` User-Agent, and prints only a
+  sanitized status and known integer counts. It never accepts a token as a
+  command-line argument or prints a response body.
 
 ## Bounded offline acceptance
 
@@ -77,8 +78,8 @@ all of the following:
 - no cron trigger, scheduled handler, app-local timer, or in-repository
   scheduler registry is present;
 - the client rejects non-HTTPS URLs and missing environment credentials,
-  sends one authenticated POST with a timeout, rejects non-2xx responses, and
-  emits no token or raw response body.
+  sends one authenticated POST with the stable User-Agent and a timeout, rejects
+  non-2xx responses, and emits no token or raw response body.
 
 Also run the normal gates before activation:
 
@@ -146,9 +147,13 @@ git diff --check
 
 ## Failure and deactivation
 
-- Treat 401 as a route/secret/wrapper mismatch, 404 as a deployment mismatch,
-  and any non-2xx client or scheduled result as an operational failure
-  requiring attention.
+- Treat 401 as a route/secret/wrapper mismatch and 404 as a deployment
+  mismatch. A 403 can be returned by Cloudflare before the Worker receives the
+  request, so it alone does not prove a route or secret mismatch; ensure the
+  job invokes this checked-in client, which sends the explicit
+  `beanfit-retention/0.4.2` User-Agent instead of Python urllib's default. Treat
+  any non-2xx client or scheduled result as an operational failure requiring
+  attention.
 - A 200 with zero counts is a valid no-op, not proof that future invocations
   will run.
 - To stop cleanup, pause the bean-sched job first, then rotate or remove the

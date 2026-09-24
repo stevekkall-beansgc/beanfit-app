@@ -77,6 +77,7 @@ class RetentionCleanupClientTest(unittest.TestCase):
         self.assertEqual(request.method, "POST")
         self.assertEqual(request.data, b"")
         self.assertEqual(request.get_header("Authorization"), f"Bearer {TOKEN}")
+        self.assertEqual(request.get_header("User-agent"), "beanfit-retention/0.4.2")
         self.assertEqual(timeout, client.REQUEST_TIMEOUT_SECONDS)
         self.assertNotIn(TOKEN, stdout)
         self.assertNotIn(RAW_BODY, stdout)
