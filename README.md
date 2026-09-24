@@ -21,38 +21,39 @@ stores them as a pending record before you approve it. Approval links that
 pending record to your account. Pairing codes expire in 15 minutes; device
 credentials are revocable.
 
-## Retention cleanup: core + bearer-gated endpoint — not proven active
+## Retention cleanup: deployed and configured; automatic run pending
 
-A bounded cleanup core exists for stale, unclaimed pairing records
-(`src/lib/cleanup.js`), and a **bearer-gated
-`POST /api/maintenance/retention-cleanup` endpoint is implemented**
-(`src/routes/maintenance.js`). This repository contains no recurring
-invocation, and source or tests cannot establish whether a deployed target is
-active. Until the route, secret, and external bean-sched invocation are
-verified for that target, make **no retention guarantee** and expect rows to
-continue accumulating.
+As of 2026-09-24, the released Worker route is deployed, the checked-in
+`scripts/retention_cleanup.py` client is available to bean-sched, the bearer
+secret is configured, and an authorized
+manual production request returned HTTP 200. Bean-sched v0.5.7 has enabled
+the sole recurring job: daily at 03:00 `America/New_York`. The first
+automatic scheduled run has not happened yet. Ongoing retention is therefore
+configured but not yet verified; make **no retention guarantee** and do not rely
+on stale pairings disappearing until repeated scheduler-owned runs are
+observed.
 
-The implemented policy, without making a claim about any deployed target: a
-device row with
-status `pending` or `denied` may be deleted once `pair_expires_at` is at least
-24 hours old; `approved` and `revoked` rows are never touched, and rows with a
-NULL `pair_expires_at` are never eligible. The core is bounded (hard cap of
-100 candidate rows per invocation), idempotent, parameterized by the current
-unix time, deletes child `recommendations`/`outbound_updates` rows before their
-devices inside one D1 batch, re-asserts eligibility in every DELETE (safe under
-races), fetches only device ids, and never logs — so no credential material can
-leak to worker logs.
+The implemented source contract, without making a claim about current
+production execution: a device row with status `pending` or `denied` may be
+deleted once `pair_expires_at` is at least 24 hours old; `approved` and
+`revoked` rows are never touched, and rows with a NULL `pair_expires_at` are
+never eligible. Each cleanup batch considers at most 100 candidate device
+rows, and each route request runs at most 10 such batches, so one authorized
+request considers at most 1,000 candidate device rows. These are
+device-candidate bounds, not a fixed bound on all child rows or a promise that
+one run drains the table. The operation is idempotent and parameterized by the
+current Unix time.
+Recommendations and outbound updates are deleted before their devices inside
+one D1 batch; eligibility is re-asserted in every DELETE (safe under races),
+only device ids are fetched, and no credential material is logged.
 
-Activation is **not performed by this repository**: this app deliberately has
-no Cloudflare `triggers.crons`, no `scheduled` handler, and **no other HTTP route
-for cleanup**. The bearer-gated endpoint exists but requires **three things**
-before it becomes live: (1) `RETENTION_CLEANUP_TOKEN` provisioned in the
-environment, (2) an **external bean-sched job registered** to call it on an
-approved cadence, and (3) deployment of both. Bean-sched owns all recurring
-scheduling (Bean one-clock rule). Until all three are in place, do not rely on
-stale pairings disappearing. Follow
-[RETENTION.md](RETENTION.md) for the activation contract, bounded synthetic
-checks, deployed-versus-inert evidence, and deactivation steps.
+Activation is external. This app deliberately has no Cloudflare
+`triggers.crons`, no `scheduled` handler, and no other HTTP route for cleanup;
+bean-sched owns all recurring scheduling under the Bean one-clock rule. The
+released route, client, bearer secret, and one enabled daily bean-sched job
+are now in place, but the first automatic run is still pending. Follow
+[RETENTION.md](RETENTION.md) for the generic source contract, activation
+checks, current-status evidence, and deactivation steps.
 
 ## Architecture ($0 by design)
 

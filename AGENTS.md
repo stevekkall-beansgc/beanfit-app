@@ -10,9 +10,10 @@ build step; plain JS string templates with strict escaping.
   stack configurator).
 - `src/lib/` — `store.js` (D1 repos), `oauth.js`/`crypto.js`/`http.js`,
   `stack.js` (generator), `fit.js` (JS mirror of beanfit's engine math),
-  `plain.js` (human-language translation layer), `cleanup.js` (inert D1
-  retention core for stale pairing records — cleanups are invoked ONLY by a
-  bean-sched job; wiring it is an open follow-up, see README).
+  `plain.js` (human-language translation layer), `cleanup.js` (bounded D1
+  retention core for stale pairing records; production cleanup is owned by
+  the external bean-sched job; see README and RETENTION.md for current
+  deployment status).
 
 ## Test commands
 - Unit: `npm test`
@@ -25,6 +26,13 @@ build step; plain JS string templates with strict escaping.
 - Bean one-clock rule: bean-sched owns ALL recurring scheduling. Never add a
   Cloudflare cron trigger, `scheduled` handler, GitHub cron, or any other
   timer to this app.
+- Retention status (2026-09-24): the released Worker route is deployed, the
+  checked-in client is available to bean-sched, the bearer secret is
+  configured, and an authorized manual production run
+  returned 200. Bean-sched v0.5.7 has enabled the sole daily 03:00
+  `America/New_York` cleanup job, but the first automatic run has not happened.
+  Keep the no-guarantee posture until repeated scheduled runs are observed;
+  see `RETENTION.md`.
 - XSS discipline: every interpolated value passes `esc()`. New renderers
   inherit this or the PR is rejected.
 - Auth gates: route-table flags own authentication. Handlers never re-check.
