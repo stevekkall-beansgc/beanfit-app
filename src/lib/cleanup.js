@@ -3,9 +3,9 @@
 // INERT BY DESIGN. Nothing in this app calls this module on a schedule, and
 // nothing ever should: the Bean one-clock rule means bean-sched owns ALL
 // recurring scheduling. There is deliberately no Cloudflare `scheduled`
-// handler, no wrangler cron trigger, and no HTTP route here. Until a later
-// bean-sched job invokes `cleanupStalePairing`, NO retention guarantee is
-// live — the rows below accumulate exactly as before.
+// handler or wrangler cron trigger. The only entry point is the bearer-gated
+// route in src/routes/maintenance.js; until an external bean-sched job invokes
+// it, NO retention guarantee is live.
 //
 // Policy (this worktree): a device row with status 'pending' or 'denied' may
 // be deleted once pair_expires_at is at least 24 hours old. 'approved' and

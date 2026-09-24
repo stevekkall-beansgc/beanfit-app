@@ -122,7 +122,7 @@ function maintenanceRequest(token) {
   });
 }
 
-test("d1-integration: FK on — bounded cleanup deletes stale pending/denied children-first, never approved/revoked",
+test("d1-integration: FK on — bounded cleanup is children-first, status-safe, and idempotent",
   { skip: DI_SKIP }, async (t) => {
     t.mock.method(Date, "now", () => NOW * 1000);
     const env = sqliteDb();
@@ -172,6 +172,18 @@ test("d1-integration: FK on — bounded cleanup deletes stale pending/denied chi
           `${tbl} must hold no orphaned rows after cleanup`,
         );
       }
+
+      const replay = await worker.fetch(maintenanceRequest(SECRET),
+        { DB: env.db, RETENTION_CLEANUP_TOKEN: SECRET });
+      assert.equal(replay.status, 200);
+      assert.deepEqual(await replay.json(), {
+        batches: 1,
+        candidates: 0,
+        recommendationsDeleted: 0,
+        outboxDeleted: 0,
+        devicesDeleted: 0,
+      });
+      assert.equal(env.batches, 1, "an idempotent replay must not execute another D1 batch");
     } finally {
       env.close();
     }

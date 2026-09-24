@@ -21,12 +21,19 @@ stores them as a pending record before you approve it. Approval links that
 pending record to your account. Pairing codes expire in 15 minutes; device
 credentials are revocable.
 
-## Retention cleanup: core + bearer-gated endpoint — NOT active
+## Retention cleanup: core + bearer-gated endpoint — not proven active
 
 A bounded cleanup core exists for stale, unclaimed pairing records
-(`src/lib/cleanup.js`), and a **bearer-gated `POST /api/maintenance/retention-cleanup` endpoint is implemented** (`src/routes/maintenance.js`), but **nothing invokes it yet, so no retention guarantee is live**. Rows accumulate exactly as before this worktree.
+(`src/lib/cleanup.js`), and a **bearer-gated
+`POST /api/maintenance/retention-cleanup` endpoint is implemented**
+(`src/routes/maintenance.js`). This repository contains no recurring
+invocation, and source or tests cannot establish whether a deployed target is
+active. Until the route, secret, and external bean-sched invocation are
+verified for that target, make **no retention guarantee** and expect rows to
+continue accumulating.
 
-The policy implemented (but inert) in this worktree: a device row with
+The implemented policy, without making a claim about any deployed target: a
+device row with
 status `pending` or `denied` may be deleted once `pair_expires_at` is at least
 24 hours old; `approved` and `revoked` rows are never touched, and rows with a
 NULL `pair_expires_at` are never eligible. The core is bounded (hard cap of
@@ -36,13 +43,16 @@ devices inside one D1 batch, re-asserts eligibility in every DELETE (safe under
 races), fetches only device ids, and never logs — so no credential material can
 leak to worker logs.
 
-Activating it is **deferred**: this app deliberately has no Cloudflare
-`triggers.crons`, no `scheduled` handler, and **no other HTTP route for cleanup**.
-The bearer-gated endpoint exists but requires **three things** before it becomes
-live: (1) `RETENTION_CLEANUP_TOKEN` provisioned in the environment, (2) a
-**bean-sched schedule registered** to call it on a cron, and (3) deployment of
-both. Bean-sched owns all recurring scheduling (Bean one-clock rule). Until all
-three are in place, do not rely on stale pairings disappearing.
+Activation is **not performed by this repository**: this app deliberately has
+no Cloudflare `triggers.crons`, no `scheduled` handler, and **no other HTTP route
+for cleanup**. The bearer-gated endpoint exists but requires **three things**
+before it becomes live: (1) `RETENTION_CLEANUP_TOKEN` provisioned in the
+environment, (2) an **external bean-sched job registered** to call it on an
+approved cadence, and (3) deployment of both. Bean-sched owns all recurring
+scheduling (Bean one-clock rule). Until all three are in place, do not rely on
+stale pairings disappearing. Follow
+[RETENTION.md](RETENTION.md) for the activation contract, bounded synthetic
+checks, deployed-versus-inert evidence, and deactivation steps.
 
 ## Architecture ($0 by design)
 
