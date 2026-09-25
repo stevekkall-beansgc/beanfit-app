@@ -21,17 +21,18 @@ stores them as a pending record before you approve it. Approval links that
 pending record to your account. Pairing codes expire in 15 minutes; device
 credentials are revocable.
 
-## Retention cleanup: deployed and configured; automatic run pending
+## Retention cleanup: first scheduled run observed
 
-As of 2026-09-24, the released Worker route is deployed, the checked-in
+As of 2026-09-25, the released Worker route is deployed, the checked-in
 `scripts/retention_cleanup.py` client is available to bean-sched, the bearer
 secret is configured, and an authorized
 manual production request returned HTTP 200. Bean-sched v0.5.7 has enabled
 the sole recurring job: daily at 03:00 `America/New_York`. The first
-automatic scheduled run has not happened yet. Ongoing retention is therefore
-configured but not yet verified; make **no retention guarantee** and do not rely
-on stale pairings disappearing until repeated scheduler-owned runs are
-observed.
+automatic scheduled run completed on 2026-09-25 at 03:00 EDT with HTTP 200
+and zero eligible candidates or deletions. That verifies one scheduler-owned
+call, not repeated operation or deletion of eligible data. Make **no retention
+guarantee** and do not rely on stale pairings disappearing until repeated
+scheduler-owned runs are observed.
 
 The implemented source contract, without making a claim about current
 production execution: a device row with status `pending` or `denied` may be
@@ -51,7 +52,7 @@ Activation is external. This app deliberately has no Cloudflare
 `triggers.crons`, no `scheduled` handler, and no other HTTP route for cleanup;
 bean-sched owns all recurring scheduling under the Bean one-clock rule. The
 released route, client, bearer secret, and one enabled daily bean-sched job
-are now in place, but the first automatic run is still pending. Follow
+are now in place, and one automatic run has succeeded. Follow
 [RETENTION.md](RETENTION.md) for the generic source contract, activation
 checks, current-status evidence, and deactivation steps.
 

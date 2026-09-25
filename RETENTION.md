@@ -1,17 +1,20 @@
 # Pairing retention activation and verification runbook
 
-## Current production status (2026-09-24)
+## Current production status (2026-09-25)
 
 The released `POST /api/maintenance/retention-cleanup` route is deployed,
 the checked-in `scripts/retention_cleanup.py` client is available to
 bean-sched, the bearer secret is configured, and an authorized manual
 production request returned HTTP 200.
 Bean-sched v0.5.7 has enabled the sole daily cleanup job at 03:00
-`America/New_York`. The first automatic scheduled run has not happened yet.
+`America/New_York`. Its first scheduled execution completed at 2026-09-25
+03:00 EDT with HTTP 200, one batch, and zero eligible candidates or
+deletions, as recorded in bean-sched's local history.
 
 This establishes deployment, bearer authorization, and scheduler
-configuration, but not an observed automatic run or ongoing retention.
-Describe the target as **configured but unverified** and make **no retention
+configuration, plus one observed automatic call. It does not establish
+repeated operation or demonstrate an automatic deletion. Describe the target
+as **active for one observed scheduled run**, and make **no retention
 guarantee** until repeated scheduler-owned runs are observed.
 
 ## Generic source contract
@@ -41,6 +44,7 @@ contract.
 | Source only, or unauthenticated probe returns 401 | Route is not proven active; no retention guarantee |
 | Route and secret exist, but no enabled bean-sched command job | No recurring invocation; manual calls are the only possible invocations |
 | All three exist, but no scheduled run is observed | Configured but unverified; no ongoing-retention claim |
+| One scheduler-owned run returns 2xx | One scheduled call succeeded; no ongoing-retention claim |
 | Scheduler-owned runs repeatedly return 2xx | Cleanup is active for that deployed target; rows remain subject to the policy and caps |
 
 ## Implemented behavior
@@ -107,8 +111,8 @@ git diff --check
 ## Activation and change sequence
 
 The following is the generic operator contract for a new target or a later
-change; it is not the current production state. As of 2026-09-24, the one
-production job is enabled and its first automatic run is pending.
+change; it is not the current production state. As of 2026-09-25, the one
+production job is enabled and one automatic run has succeeded.
 
 1. Complete offline acceptance and obtain approval for the intended retention
    cadence and operational owner. Do not create a second scheduler.
@@ -162,7 +166,7 @@ production job is enabled and its first automatic run is pending.
 
 6. For activation or re-activation, enable the external command job and observe
    scheduler-owned executions. The current production job is already enabled,
-   but its first automatic run is still pending. Record each run time, client
+   and its first automatic run succeeded. Record each run time, client
    exit status, and sanitized status and counts output. A `status=200` line
    proves that one authorized call completed; repeated successful scheduled
    runs are required before claiming ongoing cleanup. Never probe production

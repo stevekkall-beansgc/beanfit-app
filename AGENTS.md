@@ -26,11 +26,12 @@ build step; plain JS string templates with strict escaping.
 - Bean one-clock rule: bean-sched owns ALL recurring scheduling. Never add a
   Cloudflare cron trigger, `scheduled` handler, GitHub cron, or any other
   timer to this app.
-- Retention status (2026-09-24): the released Worker route is deployed, the
+- Retention status (2026-09-25): the released Worker route is deployed, the
   checked-in client is available to bean-sched, the bearer secret is
   configured, and an authorized manual production run
   returned 200. Bean-sched v0.5.7 has enabled the sole daily 03:00
-  `America/New_York` cleanup job, but the first automatic run has not happened.
+  `America/New_York` cleanup job. Its first automatic run returned 200 with
+  zero eligible candidates and deletions on 2026-09-25 at 03:00 EDT.
   Keep the no-guarantee posture until repeated scheduled runs are observed;
   see `RETENTION.md`.
 - XSS discipline: every interpolated value passes `esc()`. New renderers
