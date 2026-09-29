@@ -99,6 +99,7 @@ npm run dev                                                      # :8787
 node --test                                                      # unit tests
 ./scripts/e2e-dev.sh                                             # full pairing E2E
 npm run test:e2e                 # script regression, then supervised E2E with disposable local D1 and pinned Wrangler
+BEANFIT_SRC=/path/to/reviewed/beanfit/src task validate  # after npm ci: unit plus the same local E2E suite
 bash test/e2e-local.test.sh      # script regression alone: isolation + failure propagation
 ```
 

@@ -1,0 +1,15 @@
+version: '3'
+
+tasks:
+  validate:
+    desc: Run the existing unit and disposable local end-to-end suites.
+    preconditions:
+      - sh: test -x node_modules/.bin/wrangler
+        msg: Run npm ci before task validate.
+      - sh: test -f "$BEANFIT_SRC/beanfit/engine/estimate.py"
+        msg: Set BEANFIT_SRC to a reviewed BeanFit src fixture before task validate.
+    env:
+      CI: 'true'
+    cmds:
+      - npm test
+      - npm run test:e2e
