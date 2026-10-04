@@ -1,112 +1,71 @@
-# beanfit-app
+# BeanFit App
 
-The account + device-registry layer for [beanfit](https://github.com/stevekkall-beansgc/beanfit):
-what turns a one-shot CLI answer into an ongoing relationship.
+Keep your devices and local-AI recommendation snapshots in one account.
+BeanFit App is the browser companion to
+[BeanFit](https://github.com/stevekkall-beansgc/beanfit): pair a device, review
+what it sent, and keep its recommended stack.
+
+This version stores snapshots. Automatic catalog-update alerts are planned,
+not delivered.
+
+## Pairing makes the data boundary visible
+
+![The device sends a sanitized profile and any supplied recommendation snapshot before approval. Browser review can approve linking it to an account or deny linking; no deletion outcome is claimed here.](assets/readme-flow.svg)
+
+Transmission happens before the browser approval. Approval links the pending record to the account; the diagram does not imply that denial instantly deletes every record.
+[Full-size diagram](assets/readme-flow.svg) · [Editable source](assets/readme-flow.mmd).
 
 ## What it does (customer flow)
 
-1. **Create an account** in the browser.
-2. **Register your device**: run `beanfit register` in your terminal. The CLI
-   detects hardware and computes recommendations *locally*, then starts a
-   pairing request. The app stores the sanitized hardware profile and any
-   supplied recommendation snapshot as a pending record before you approve it.
-   Review that record in the browser, then approve or deny it.
-3. **Get your stack**: the device page holds your recommendation snapshot
-   (model × quant × runtime with honest uncertainty bands). Automatic
-   update alerts are planned, not delivered by this version.
+1. Create an account in the configured app.
+2. Run `beanfit register` on the device to begin pairing.
+3. Review the pending hardware profile and recommendation snapshot in the
+   browser, then approve or deny it.
+4. Open the linked device page to see the stored recommendation.
 
-Privacy stance: Hardware detection runs locally. Pairing transmits the sanitized
-hardware profile and any supplied recommendation snapshot to this app, which
-stores them as a pending record before you approve it. Approval links that
-pending record to your account. Pairing codes expire in 15 minutes; device
-credentials are revocable.
+Hardware detection runs locally. Pairing transmits the sanitized hardware
+profile and any supplied recommendation snapshot to this app, which stores
+them as a pending record before you approve it. Approval links that pending
+record to your account. Codes expire after 15 minutes and device credentials
+are revocable. Fit estimates run locally and inherit BeanFit's limits; they
+are not new benchmarks.
 
-## Retention cleanup: first scheduled run observed
+## Start as a developer
 
-As of 2026-09-25, the released Worker route is deployed, the checked-in
-`scripts/retention_cleanup.py` client is available to bean-sched, the bearer
-secret is configured, and an authorized
-manual production request returned HTTP 200. Bean-sched v0.5.7 has enabled
-the sole recurring job: daily at 03:00 `America/New_York`. The first
-automatic scheduled run completed on 2026-09-25 at 03:00 EDT with HTTP 200
-and zero eligible candidates or deletions. That verifies one scheduler-owned
-call, not repeated operation or deletion of eligible data. Make **no retention
-guarantee** and do not rely on stale pairings disappearing until repeated
-scheduler-owned runs are observed.
+This repository is a Cloudflare Worker with server-rendered pages, a JSON API
+and D1 storage. There is no client build framework. No public visitor demo
+URL is supplied here.
 
-The implemented source contract, without making a claim about current
-production execution: a device row with status `pending` or `denied` may be
-deleted once `pair_expires_at` is at least 24 hours old; `approved` and
-`revoked` rows are never touched, and rows with a NULL `pair_expires_at` are
-never eligible. Each cleanup batch considers at most 100 candidate device
-rows, and each route request runs at most 10 such batches, so one authorized
-request considers at most 1,000 candidate device rows. These are
-device-candidate bounds, not a fixed bound on all child rows or a promise that
-one run drains the table. The operation is idempotent and parameterized by the
-current Unix time.
-Recommendations and outbound updates are deleted before their devices inside
-one D1 batch; eligibility is re-asserted in every DELETE (safe under races),
-only device ids are fetched, and no credential material is logged.
+Read [the local development guide](README-REFERENCE.md#development) before
+creating a database or starting Wrangler. It covers schema preparation,
+catalog loading and the pairing E2E. For a simple source-level test, after
+installing the checked-in dependencies with `npm ci`:
 
-Activation is external. This app deliberately has no Cloudflare
-`triggers.crons`, no `scheduled` handler, and no other HTTP route for cleanup;
-bean-sched owns all recurring scheduling under the Bean one-clock rule. The
-released route, client, bearer secret, and one enabled daily bean-sched job
-are now in place, and one automatic run has succeeded. Follow
-[RETENTION.md](RETENTION.md) for the generic source contract, activation
-checks, current-status evidence, and deactivation steps.
+```bash
+npm test
+```
+
+The [pairing tests](test/) and [route implementation](src/routes/pair.js)
+show the approval and credential handoff. The full supervised local E2E uses
+a disposable database; it is not a production pairing test.
 
 ## Architecture ($0 by design)
 
-- **Cloudflare Workers** (SSR pages + JSON API) — no framework, no client
-  build step, plain JS ES modules
-- **CSP**: `script-src 'self'`; browser registration and configuration load
-  from fixed same-origin endpoints backed by checked-in JS modules, so no inline
-  script is authorized. The sole unsafe allowance is `style-src 'unsafe-inline'`,
-  needed by the current shared `<style>` block and `style` attributes.
-- **D1** (SQLite) for users / sessions / devices / recommendations / catalog /
-  update outbox
-- Sessions: DB-backed bearer tokens in HttpOnly cookies · CSRF via per-session
-  HMAC tokens · passwords PBKDF2-SHA256 (100k iterations)
-- Google SSO (see `GOOGLE-SSO.md`): a known Google identity signs in; a new
-  email creates a passwordless account. Linking an existing account to Google
-  is explicit only — an authenticated, CSRF-protected POST on the dashboard,
-  with the OAuth state bound to that exact session. A matching email alone
-  never links or takes over an account.
-- The fit math here (`src/lib/fit.js`) mirrors the CLI engine so drift-watch
-  could later re-fit stored devices against new catalog rows without calling
-  the CLI; no alert delivery runs in this version
+[The architecture and flow](README-REFERENCE.md#architecture-0-by-design)
+describe Workers, D1, sessions, explicit Google account linking and the fit
+engine. Verify present platform limits and costs before deploying;
+the heading is design intent, not a spending guarantee.
 
-```
-CLI (beanfit register)          Web app
-  detect → evaluate ──POST──▶ /api/pair/start        (pending device + code)
-  poll ◀─────────────GET───── /api/pair/status/:id       (status only)
-  user approves in browser ─▶ /pair/:code/approve    (device claimed + token issued)
-  credential ◀───────────────GET───── /api/pair/claim/:id (start-time secret)
-  credential saved locally (owner-only file)
-                                 drift-watch later: catalog diff × stored profiles
-                                                   → outbound_updates outbox
-```
+## Retention cleanup: first scheduled run observed
 
-## Development
-
-```bash
-npm install
-npx wrangler d1 execute beanfit-app --local --file schema.sql   # first time
-npx wrangler d1 execute beanfit-app --local --file migrations/0004_device_credential_handoff.sql
-BEANFIT_SRC=../beanfit/src node scripts/sync_catalog.js         # load catalog
-npm run dev                                                      # :8787
-node --test                                                      # unit tests
-./scripts/e2e-dev.sh                                             # full pairing E2E
-npm run test:e2e                 # script regression, then supervised E2E with disposable local D1 and pinned Wrangler
-bash test/e2e-local.test.sh      # script regression alone: isolation + failure propagation
-```
+[RETENTION.md](RETENTION.md) records the source rules and the dated September
+25 observation: one scheduled call with zero eligible candidates or deletions.
+Do not infer repeated cleanup or a retention guarantee. Bean Sched remains
+the sole recurring clock; this app has no cleanup cron.
 
 ## Deploying
 
-See [DEPLOY.md](DEPLOY.md). Verify current Cloudflare limits and costs before
-deploying a pilot.
-
----
-
-**Agents:** see [AGENTS.md](AGENTS.md) before changing anything here.
+Use [DEPLOY.md](DEPLOY.md) under separate deployment approval.
+[The detailed reference](README-REFERENCE.md) retains the retention bounds,
+security architecture and development commands. [AGENTS.md](AGENTS.md)
+contains contributor and test rules.

@@ -1,0 +1,8 @@
+flowchart TD
+  accTitle: Pairing makes the data boundary visible
+  accDescr: The device sends a sanitized profile and any supplied recommendation snapshot before approval. Browser review can approve linking it to an account or deny linking; no deletion outcome is claimed here.
+  A["Device detects and recommends locally"] --> B["Send profile and optional snapshot"]
+  B --> C["Pending pairing record in the app"]
+  C --> D{"Browser review"}
+  D -->|"Approve"| E["Link device and show stored snapshot"]
+  D -->|"Deny"| F["Do not link to the account"]
