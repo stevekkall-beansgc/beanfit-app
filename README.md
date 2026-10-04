@@ -8,12 +8,15 @@ what it sent, and keep its recommended stack.
 This version stores snapshots. Automatic catalog-update alerts are planned,
 not delivered.
 
+Start here: [Follow the pairing journey](#what-it-does-customer-flow).
+
 ## Pairing makes the data boundary visible
 
-![The device sends a sanitized profile and any supplied recommendation snapshot before approval. Browser review can approve linking it to an account or deny linking; no deletion outcome is claimed here.](assets/readme-flow.svg)
+![On the device BeanFit detects hardware and computes estimates. Pairing sends a sanitized profile and optional recommendation snapshot to a Cloudflare Worker, which stores pending data in D1 before browser approval. Server-rendered pages and authenticated approval link the device to an account; denied linking is distinct from deletion. Device credentials are stored hashed and returned through a separate CLI handoff.](assets/readme-methods.svg)
 
-Transmission happens before the browser approval. Approval links the pending record to the account; the diagram does not imply that denial instantly deletes every record.
-[Full-size diagram](assets/readme-flow.svg) · [Editable source](assets/readme-flow.mmd).
+Local estimation, cloud storage and browser approval are separate responsibilities. Pairing sends data before approval; the Worker stores pending records in D1, and approval links them to an account. Denial is not an instant-delete promise. [Pairing routes](src/routes/pair.js) · [D1 store](src/lib/store.js).
+
+[Full-size diagram and editable SVG source](assets/readme-methods.svg).
 
 ## What it does (customer flow)
 
