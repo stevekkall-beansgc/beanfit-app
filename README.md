@@ -48,6 +48,10 @@ installing the checked-in dependencies with `npm ci`:
 npm test
 ```
 
+For unit checks and the full disposable local E2E together, use
+`BEANFIT_SRC=/path/to/reviewed/beanfit/src task validate` after `npm ci`.
+The [development guide](README-REFERENCE.md#development) describes the fixture.
+
 The [pairing tests](test/) and [route implementation](src/routes/pair.js)
 show the approval and credential handoff. The full supervised local E2E uses
 a disposable database; it is not a production pairing test.

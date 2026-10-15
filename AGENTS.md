@@ -16,6 +16,8 @@ build step; plain JS string templates with strict escaping.
   deployment status).
 
 ## Test commands
+- Full local validation: `BEANFIT_SRC=/path/to/reviewed/beanfit/src task validate`
+  after `npm ci`. This runs the unit and disposable local E2E suites below.
 - Unit: `npm test`
 - Full e2e (boots wrangler dev --local, local D1, drives the real CLI):
   `npm run test:e2e`
