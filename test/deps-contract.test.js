@@ -9,11 +9,12 @@ const pkg = JSON.parse(readFileSync(path.join(repoRoot, "package.json"), "utf8")
 const lock = JSON.parse(readFileSync(path.join(repoRoot, "package-lock.json"), "utf8"));
 
 // GHSA-rgj7-g3m4-5g8c (sharp, via miniflare in the dev tree): libheif
-// vulnerabilities fixed only in sharp >= 0.35.4. The lock must never regress
+// vulnerabilities fixed only in sharp >= 0.35.4; librsvg CVE-2026-96889 requires >= 0.35.5. The lock must never regress
 // below the patched release, and the manifest must keep the override.
-const PATCHED_SHARP = "0.35.4";
-const PINNED_WRANGLER = "4.125.0";
-const PINNED_MINIFLARE = "5.20260820.0-alpha";
+const PATCHED_SHARP = "0.35.5";
+const PINNED_WRANGLER = "4.151.0";
+const PINNED_MINIFLARE = "5.20261012.0-beta";
+const PATCHED_UNDICI = "7.29.1";
 
 function semverParts(v) {
   return v.split(".").slice(0, 3).map(Number);
@@ -38,7 +39,7 @@ test("lockfile resolves sharp to the patched version, dev-only", () => {
   assert.equal(sharpNode.dev, true, "sharp must remain a dev-only dependency");
   assert.ok(
     semverGte(sharpNode.version, PATCHED_SHARP),
-    `sharp ${sharpNode.version} must be >= ${PATCHED_SHARP} (GHSA-rgj7-g3m4-5g8c)`,
+    `sharp ${sharpNode.version} must be >= ${PATCHED_SHARP} (GHSA-rgj7-g3m4-5g8c, GHSA-wq5f-xc86-pv6w)`,
   );
 });
 
@@ -53,14 +54,23 @@ test("package.json keeps the sharp override at the patched release", () => {
   );
 });
 
-test("override fixes only sharp: wrangler + miniflare stay pinned", () => {
+test("reviewed Wrangler and Miniflare versions stay pinned", () => {
   assert.equal(pkg.devDependencies.wrangler, PINNED_WRANGLER);
   assert.equal(lock.packages["node_modules/wrangler"]?.version, PINNED_WRANGLER);
   assert.equal(
     lock.packages["node_modules/miniflare"]?.version,
     PINNED_MINIFLARE,
-    "miniflare pin must not be replaced to chase the advisory",
+    "Miniflare must match the reviewed Wrangler update",
   );
+});
+
+test("every locked Undici copy includes the reviewed security fixes", () => {
+  const copies = Object.entries(lock.packages).filter(([key]) => key.endsWith("node_modules/undici"));
+  assert.ok(copies.length, "Undici must be present in the development lockfile");
+  for (const [key, entry] of copies) {
+    assert.equal(entry.dev, true, `${key} must remain development-only`);
+    assert.ok(semverGte(entry.version, PATCHED_UNDICI), `${key} ${entry.version} must be >= ${PATCHED_UNDICI}`);
+  }
 });
 
 test("production tree stays dependency-free (advisory is dev-only)", () => {
