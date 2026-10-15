@@ -80,24 +80,26 @@ export function esc(s) {
 }
 
 export function landing(user = null) {
-  return layout("What runs on your machine — and stays optimal",
+  return layout("What runs on your machine",
     `<h1>Your local AI stack, sized for YOUR hardware.</h1>
      <p class="muted">beanfit detects what your device can actually run — model × quant ×
-     runtime with honest speed estimates — registers it to your account, and keeps
-     recommendations current as better models ship.</p>
+     runtime with speed estimates — and registers its hardware profile and any
+     supplied recommendation snapshot to your account.</p>
      <div class="card">
        <h2>Three steps</h2>
        <ol>
          <li><strong>Create an account</strong> (you're here).</li>
          <li><strong>Register your device</strong>: run <code>beanfit register</code> in your
              terminal and approve the pairing code here.</li>
-         <li><strong>Get your stack</strong>: exact commands to run the best models for your
-             machine — plus an alert when something better fits.</li>
+         <li><strong>Get your stack</strong>: view your saved recommendation snapshot
+             and generate setup commands for your machine.</li>
        </ol>
        ${user
         ? `<p><a href="/dashboard"><button>Go to your devices</button></a></p>`
         : `<p><a href="/signup"><button>Create your account</button></a></p>`}
      </div>
+     <p class="muted">Recommendation snapshots are saved at registration and are not automatically
+     refreshed as models ship. Automatic update alerts are planned, not delivered by this version.</p>
      <p class="muted">Hardware detection runs locally. Pairing transmits the sanitized hardware
      profile and any supplied recommendation snapshot to this app, which stores them as a pending
      record before you approve it. Approval links that pending record to your account.</p>`, user);
@@ -177,6 +179,9 @@ $ PYTHONPATH=src python3 -m beanfit register  <button class="secondary" id="copy
 
   return layout("Your devices",
     `<h1>Your devices</h1>
+     <p class="muted">Device pages show any recommendation snapshot saved at registration;
+     snapshots are not automatically refreshed as models ship.
+     Automatic update alerts are planned, not delivered by this version.</p>
      ${devices.length ? `<div class="grid">${cards}</div>` : emptyState}
      ${devices.length ? `<p class="muted">To register another machine, run
        <code>git clone https://github.com/stevekkall-beansgc/beanfit &amp;&amp; cd beanfit &amp;&amp; PYTHONPATH=src python3 -m beanfit register</code> on it.</p>` : ""}
@@ -217,7 +222,8 @@ export function pairConfirm(user, device, csrf, recsPayload) {
      </details>
      ${recsPayload ? renderRecs(recsPayload) : ""}
      <p class="muted">Approving links this device to <strong>${esc(user.email)}</strong>. You can revoke it anytime.
-     beanfit will use it to send you fit updates when better models land.</p>
+     Any supplied recommendation snapshot is saved at registration and is not automatically
+     refreshed as models ship. Automatic update alerts are planned, not delivered by this version.</p>
      <form method="post" action="/pair/${esc(p.pair_code)}/approve">
        <input type="hidden" name="csrf" value="${esc(csrf)}">
        <label>Nickname<br><input name="label" value="${esc(p.label)}" required maxlength="64"></label>
@@ -333,6 +339,9 @@ export function deviceDetail(device, rec, user = null, stack = null, csrf = "") 
      <p class="muted">${esc(device.chip ?? "")} · registered ${esc(device.approved_at ?? "")}
        <details><summary style="cursor:pointer;display:inline">technical</summary>
        ${esc(device.os ?? "")} · budget ${device.model_budget_gib != null ? esc(String(device.model_budget_gib)) + " GiB" : "not measured"}</details></p>
+     <p class="muted">This device's recommendation snapshot is saved at registration and is not
+     automatically refreshed as models ship.
+     Automatic update alerts are planned, not delivered by this version.</p>
      ${rec ? renderRecs(rec.payload_json)
        : `<div class="card muted">No recommendation snapshot stored yet.</div>`}
      ${stack ? `<div class="card"><h2 style="margin-top:0">Your setup</h2>${renderStack(stack)}</div>` : ""}
