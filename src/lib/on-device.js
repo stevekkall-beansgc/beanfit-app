@@ -1,6 +1,7 @@
 import { ON_DEVICE_CATALOG as catalog } from "./on-device-catalog.js";
 
 export { catalog as onDeviceCatalog };
+export const CONTRACT_VERSION = "v1";
 
 export function suggestOnDevice({ experience = "text_assistant", device = "unknown",
   os_major = null, memory_budget_bytes = null, context_tokens = 2048, preference = "balanced" } = {}) {
@@ -29,7 +30,7 @@ export function suggestOnDevice({ experience = "text_assistant", device = "unkno
   candidates.sort((a, b) => preference === "smallest_download"
     ? a.download_bytes - b.download_bytes || a.id.localeCompare(b.id)
     : priorities.get(a.id) - priorities.get(b.id) || a.id.localeCompare(b.id));
-  return { schema: "beanfit.on-device.suggestions.v1", catalog_as_of: catalog.as_of,
+  return { schema: `beanfit.on-device.suggestions.${CONTRACT_VERSION}`, catalog_as_of: catalog.as_of,
     experience, device, os_major, context_tokens, memory_budget_bytes, preference,
     status: "needs_device_evidence", selection: null,
     trial_order: candidates.filter(r => r.eligible_for_trial).map(r => r.id),

@@ -117,6 +117,8 @@ deploying a pilot.
 
 ## On-device model candidates
 
+The suggestions API contract is `v1` (`beanfit.on-device.suggestions.v1`).
+
 `GET /models` is a public server-rendered candidate browser; `GET
 /api/models/suggest` returns the same screening as JSON. Both accept
 `experience` (text_assistant, structured_extraction, shopping_filters,
