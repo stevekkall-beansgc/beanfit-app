@@ -88,3 +88,13 @@ test("automatic default emits no install commands when nothing fits", () => {
   assert.deepEqual(result.steps, []);
   assert.deepEqual(result.files, []);
 });
+
+test("automatic default abstains when device memory evidence is unavailable", () => {
+  for (const budget of [undefined, null, 0, NaN]) {
+    const result = generateStack({ model_budget_gib: budget }, { surfaces: ["code_opencode"] });
+    assert.equal(result.model_tag, null);
+    assert.deepEqual(result.steps, []);
+    assert.deepEqual(result.files, []);
+    assert.match(result.warnings[0], /memory budget is required/);
+  }
+});

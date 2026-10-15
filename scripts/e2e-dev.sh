@@ -223,9 +223,24 @@ if [ -z "$DEVICE_ID" ]; then
   exit 1
 fi
 
-echo "== 7. configurator honors surfaces (regression: interface/surfaces seam)"
-http_request "configurator" "200" -b "$JAR" -H "content-type: application/json" \
+echo "== 7. automatic configurator respects available memory evidence"
+http_request "automatic configurator" "200" -b "$JAR" -H "content-type: application/json" \
   -d '{"surfaces":["code_opencode","chat_webui"],"model_tag":null}' \
+  "$BASE/api/devices/$DEVICE_ID/stack"
+if printf '%s' "$HTTP_BODY" | grep -Eq 'No automatic setup was generated|A device memory budget is required'; then
+  if printf '%s' "$HTTP_BODY" | grep -F '<pre>' >/dev/null; then
+    echo "FAIL: automatic configurator emitted commands without a fitting model"
+    exit 1
+  fi
+  echo "automatic configurator abstained without a fitting budget OK"
+elif ! printf '%s' "$HTTP_BODY" | grep -i "opencode" >/dev/null; then
+  echo "FAIL: automatic configurator neither supplied the chosen surface nor abstained"
+  exit 1
+fi
+
+echo "== 7b. explicit configurator honors surfaces (regression: interface/surfaces seam)"
+http_request "configurator" "200" -b "$JAR" -H "content-type: application/json" \
+  -d '{"surfaces":["code_opencode","chat_webui"],"model_tag":"qwen3:8b"}' \
   "$BASE/api/devices/$DEVICE_ID/stack"
 FRAG="$HTTP_BODY"
 if ! printf '%s' "$FRAG" | grep -i "opencode" >/dev/null; then
