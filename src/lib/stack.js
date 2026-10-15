@@ -73,7 +73,17 @@ export function generateStack(profile, choices) {
     ? choices.surfaces.filter(s => SURFACES[s])
     : [];
   const use = surfaces.length ? surfaces : ["chat_webui"];
-  const tag = MODELS[choices.model_tag] ? choices.model_tag : "gemma3:27b";
+  const hasBudget = Number.isFinite(profile?.model_budget_gib) && profile.model_budget_gib > 0;
+  const preferred = Array.isArray(choices.recommended_tags) ? choices.recommended_tags : [];
+  const defaults = [...preferred, "gemma3:27b", ...Object.keys(MODELS)];
+  const tag = Object.hasOwn(MODELS, choices.model_tag) ? choices.model_tag
+    : defaults.find(id => Object.hasOwn(MODELS, id) && hasBudget && fits(MODELS[id], profile).fits);
+  if (!tag) {
+    return { surfaces: use, model_tag: null, context: null, steps: [], files: [],
+      warnings: [hasBudget ? "No catalog model fits the estimated memory budget. No automatic setup was generated."
+        : "A device memory budget is required before suggesting an automatic setup."],
+      generated_at: new Date().toISOString() };
+  }
   const modelName = MODELS[tag].name;
   const warnings = [];
   const steps = [];

@@ -65,6 +65,7 @@ export function layout(title, content, user = null) {
 <header class="site"><div class="inner">
   <a href="/">beanfit</a>
   <nav>
+    <a href="/models">iPhone model candidates</a>
     ${user
       ? `<span class="muted" style="color:#aab">${esc(user.email)}</span><a href="/logout">Sign out</a>`
       : `<a href="/login">Sign in</a><a href="/signup">Create account</a>`}
@@ -320,7 +321,8 @@ export function stackForm(device, rec) {
     ${surfaces}
     <p style="margin-top:14px"><strong>Which AI?</strong></p>
     <select name="model" style="width:100%">
-      <optgroup label="Runs great on this machine">${fits.map(opt).join("")}</optgroup>
+      <option value="">Use a starting model within the estimated budget</option>
+      <optgroup label="Fits the estimated memory budget">${fits.map(opt).join("")}</optgroup>
       ${rest.length ? `<optgroup label="Ambitious for this machine (will warn)">${rest.map(opt).join("")}</optgroup>` : ""}
     </select>
     <button id="gen-stack" style="margin-top:12px">Generate my setup</button>

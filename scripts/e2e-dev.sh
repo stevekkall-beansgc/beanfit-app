@@ -223,9 +223,24 @@ if [ -z "$DEVICE_ID" ]; then
   exit 1
 fi
 
-echo "== 7. configurator honors surfaces (regression: interface/surfaces seam)"
-http_request "configurator" "200" -b "$JAR" -H "content-type: application/json" \
+echo "== 7. automatic configurator respects available memory evidence"
+http_request "automatic configurator" "200" -b "$JAR" -H "content-type: application/json" \
   -d '{"surfaces":["code_opencode","chat_webui"],"model_tag":null}' \
+  "$BASE/api/devices/$DEVICE_ID/stack"
+if printf '%s' "$HTTP_BODY" | grep -Eq 'No automatic setup was generated|A device memory budget is required'; then
+  if printf '%s' "$HTTP_BODY" | grep -F '<pre>' >/dev/null; then
+    echo "FAIL: automatic configurator emitted commands without a fitting model"
+    exit 1
+  fi
+  echo "automatic configurator abstained without a fitting budget OK"
+elif ! printf '%s' "$HTTP_BODY" | grep -i "opencode" >/dev/null; then
+  echo "FAIL: automatic configurator neither supplied the chosen surface nor abstained"
+  exit 1
+fi
+
+echo "== 7b. explicit configurator honors surfaces (regression: interface/surfaces seam)"
+http_request "configurator" "200" -b "$JAR" -H "content-type: application/json" \
+  -d '{"surfaces":["code_opencode","chat_webui"],"model_tag":"qwen3:8b"}' \
   "$BASE/api/devices/$DEVICE_ID/stack"
 FRAG="$HTTP_BODY"
 if ! printf '%s' "$FRAG" | grep -i "opencode" >/dev/null; then
@@ -300,3 +315,16 @@ fi
 echo "forged oauth state rejected OK"
 
 echo "E2E PASS"
+
+http_request "on-device model page" "200" "$BASE/models?device=iPhone15,3&ios=26"
+if ! printf '%s' "$HTTP_BODY" | grep -F 'LFM2.5 1.2B' >/dev/null; then
+  echo 'FAIL: current on-device model catalog missing'; exit 1
+fi
+http_request "on-device shopping suggestions" "200" "$BASE/api/models/suggest?device=iPhone15,3&ios=26&experience=shopping_filters"
+node --input-type=module -e '
+const d = JSON.parse(process.argv[1]);
+if (d.selection !== null || d.trial_order.includes("liquid350") || d.trial_order.includes("qwen08") || d.trial_order.includes("liquid26")) process.exit(1);
+if (!d.trial_order.includes("liquid12") || !d.candidates.every(c => c.memory_fit === "unknown")) process.exit(1);
+' "$HTTP_BODY"
+http_request "invalid on-device budget" "400" "$BASE/api/models/suggest?memory_budget_mib=0"
+echo 'On-device catalog and suggestion HTTP E2E PASS'

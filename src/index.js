@@ -5,6 +5,7 @@ import { makeAssetHandlers } from "./routes/assets.js";
 import { html } from "./lib/http.js";
 import { timingSafeEqual } from "./lib/crypto.js";
 import { checkRateLimit } from "./lib/rate-limit.js";
+import { modelSuggestions } from "./routes/models.js";
 
 export default {
   async fetch(request, env) {
@@ -64,6 +65,8 @@ export default {
 };
 
 const ROUTES = [
+  ["GET", "/models", c => modelSuggestions(c)],
+  ["GET", "/api/models/suggest", c => modelSuggestions(c, true)],
   ["GET", "/assets/register.js", (c, h) => h.assets.register()],
   ["GET", "/assets/configurator.js", (c, h) => h.assets.configurator()],
   ["GET", "/", (c, h) => h.pages.landing(c)],
