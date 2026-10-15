@@ -75,3 +75,16 @@ test("catalog and surfaces stay stable", () => {
   assert.equal(SURFACES.chat_webui.requiresDocker, true);
   assert.equal(SURFACES.code_opencode.requiresDocker, false);
 });
+
+test("automatic desktop default respects a small memory budget", () => {
+  const result = generateStack(SMALL, { surfaces: ["chat_terminal"] });
+  assert.equal(result.model_tag, "qwen3:8b");
+  assert.equal(result.warnings.length, 0);
+});
+
+test("automatic default emits no install commands when nothing fits", () => {
+  const result = generateStack({ model_budget_gib: 1 }, { surfaces: ["chat_terminal"] });
+  assert.equal(result.model_tag, null);
+  assert.deepEqual(result.steps, []);
+  assert.deepEqual(result.files, []);
+});

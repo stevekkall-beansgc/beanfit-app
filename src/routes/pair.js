@@ -54,9 +54,12 @@ export function makePageHandlers(env, auth) {
       let body = {};
       try { body = await ctx.request.json(); } catch { /* defaults */ }
       const rec = await store.recommendations.forDevice(device.id);
+      let ranked = [];
+      try { ranked = JSON.parse(rec?.payload_json ?? "{}").ranked ?? []; } catch { /* no usable snapshot */ }
       const stack = generateStack(device, {
         surfaces: body.surfaces,
         model_tag: body.model_tag,
+        recommended_tags: Array.isArray(ranked) ? ranked.filter(r => r?.fits === true).map(r => r.runtime_tag) : [],
       });
       await store.devices.setStack(device.id, JSON.stringify(stack));
       return html(renderStack(stack));

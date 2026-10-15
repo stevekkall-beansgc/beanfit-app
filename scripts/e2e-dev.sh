@@ -300,3 +300,16 @@ fi
 echo "forged oauth state rejected OK"
 
 echo "E2E PASS"
+
+http_request "on-device model page" "200" "$BASE/models?device=iPhone15,3&ios=26"
+if ! printf '%s' "$HTTP_BODY" | grep -F 'LFM2.5 1.2B' >/dev/null; then
+  echo 'FAIL: current on-device model catalog missing'; exit 1
+fi
+http_request "on-device shopping suggestions" "200" "$BASE/api/models/suggest?device=iPhone15,3&ios=26&experience=shopping_filters"
+node --input-type=module -e '
+const d = JSON.parse(process.argv[1]);
+if (d.selection !== null || d.trial_order.includes("liquid350") || d.trial_order.includes("qwen08") || d.trial_order.includes("liquid26")) process.exit(1);
+if (!d.trial_order.includes("liquid12") || !d.candidates.every(c => c.memory_fit === "unknown")) process.exit(1);
+' "$HTTP_BODY"
+http_request "invalid on-device budget" "400" "$BASE/api/models/suggest?memory_budget_mib=0"
+echo 'On-device catalog and suggestion HTTP E2E PASS'

@@ -112,3 +112,44 @@ deploying a pilot.
 ---
 
 **Agents:** see [AGENTS.md](AGENTS.md) before changing anything here.
+
+
+## On-device model candidates
+
+`GET /models` is a public server-rendered candidate browser; `GET
+/api/models/suggest` returns the same screening as JSON. Both accept
+`experience` (text_assistant, structured_extraction, shopping_filters,
+image_description, transcription, speech_output), an exact `device` identifier,
+`ios` major version, optional positive whole-number `memory_budget_mib`, and
+`preference` (balanced or smallest_download). Example:
+
+```text
+/models?experience=shopping_filters&device=iPhone15,3&ios=26
+/api/models/suggest?experience=text_assistant&device=iPhone15,3&ios=26
+```
+
+The date and source pins come from BeanFit's canonical
+`src/beanfit/catalog/on_device.json`. `src/lib/on-device-catalog.js` is a generated
+snapshot. Regenerate it with BeanFit's `scripts/sync_on_device_catalog.py
+--app-root /path/to/beanfit-app`; use `--check` to detect drift. Cross-repository
+tests compare catalog and complete suggestions against the Python implementation;
+set `BEANFIT_SRC=/path/to/beanfit/src` when the repositories are not siblings.
+Native snapshots are generated from the same source.
+
+Suggestions are task-specific experiment ordering, not calibrated quality scores.
+Every row has `qualified: false` and `memory_fit: unknown`; `selection` remains
+null. A small enough weight download never proves whole-stack fit. The optional
+budget conservatively excludes weight files reaching it before testing; file
+size is not a resident-memory bound. Reviewed qualification in BeanFit uses
+measured memory and headroom rather than this file-size heuristic. Unknown
+hardware/OS and integrations unavailable in Pocket receive no runnable trial
+suggestion. Known October 6 shopping failures retain their exclusion and manual
+fallback. This page neither stores input nor runs a model, downloads weights,
+accepts private prompts, or uploads qualification receipts. `/models` adds no
+cloud inference or scheduled jobs.
+
+The legacy desktop setup generator now rechecks the stored preference order
+against the current device memory budget before choosing an automatic default.
+If no model fits, it emits no installation commands. Explicit user overrides
+continue to carry their existing warnings. Estimated fit is not measured speed,
+quality or whole-product qualification.

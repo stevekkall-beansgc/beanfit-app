@@ -33,6 +33,15 @@ record to your account. Codes expire after 15 minutes and device credentials
 are revocable. Fit estimates run locally and inherit BeanFit's limits; they
 are not new benchmarks.
 
+## Current iPhone model candidates
+
+Open `/models` in the configured app to choose an experience, phone and iOS
+version. The page shows current pinned models and a task-specific trial order.
+It does not run inference or claim measured memory fit. Known shopping failures
+stay excluded; vision, speech and reasoning configurations needing integration
+are identified. [Catalog synchronization and API](README-REFERENCE.md#on-device-model-candidates)
+explain the shared BeanFit source.
+
 ## Start as a developer
 
 This repository is a Cloudflare Worker with server-rendered pages, a JSON API
