@@ -92,17 +92,46 @@ CLI (beanfit register)          Web app
 
 ## Development
 
+Use Node.js 22+, Python 3, Task 3 and the checked-in npm lockfile. Choose an
+explicit, reviewed BeanFit source checkout; `BEANFIT_SRC` must name its `src`
+directory (containing `beanfit/engine/estimate.py`). Record that checkout's
+commit alongside the app commit when retaining conformance or pairing evidence.
+
+The supported full validation path uses frozen dependencies and a disposable
+local database. It starts Wrangler on loopback, signs up a synthetic local
+account and drives the real BeanFit CLI plus simulated browser-route HTTP
+requests. It makes no production pairing or real Google sign-in claim.
+
 ```bash
-npm install
-npx wrangler d1 execute beanfit-app --local --file schema.sql   # first time
-npx wrangler d1 execute beanfit-app --local --file migrations/0004_device_credential_handoff.sql
-BEANFIT_SRC=../beanfit/src node scripts/sync_catalog.js         # load catalog
-npm run dev                                                      # :8787
-node --test                                                      # unit tests
-./scripts/e2e-dev.sh                                             # full pairing E2E
-npm run test:e2e                 # script regression, then supervised E2E with disposable local D1 and pinned Wrangler
-BEANFIT_SRC=/path/to/reviewed/beanfit/src task validate  # after npm ci: unit plus the same disposable local E2E suite
-bash test/e2e-local.test.sh      # script regression alone: isolation + failure propagation
+npm ci
+BEANFIT_SRC=/absolute/path/to/reviewed/beanfit/src task validate
+```
+
+Expected result: the unit suite and script regression checks pass, then the
+local pairing, credential handoff, stack and model-suggestion checks finish
+successfully. `scripts/e2e-local.sh` applies `schema.sql` and every checked-in
+migration in order to one fresh temporary persistence directory. It uses the
+lockfile-installed Wrangler, creates dummy local configuration only if absent,
+and removes only its own unchanged configuration and temporary database on exit.
+Use a fresh checkout without live `.dev.vars`; no remote D1 or deployment is
+needed. The E2E checks HTML routes with HTTP requests; it does not automate an
+unfamiliar person's browser or qualify inference quality.
+
+For interactive local development, inspect `scripts/sync_catalog.js` and
+`scripts/e2e-local.sh` before choosing a manual database target. Catalog sync has
+its own database path; the validation wrapper above is the supported disposable
+path. A manual setup must apply `schema.sql` and **all** `migrations/*.sql` in
+order, using the same local persistence directory as the dev server. Applying
+only `0004_device_credential_handoff.sql` leaves other schema changes unapplied.
+Use dummy local configuration; never reuse production credentials.
+
+Individual existing checks remain available:
+
+```bash
+npm test
+bash test/e2e-local.test.sh       # wrapper isolation and failure propagation
+BEANFIT_SRC=/absolute/path/to/reviewed/beanfit/src npm run test:e2e
+                                # script regressions and disposable local E2E
 ```
 
 ## Deploying
