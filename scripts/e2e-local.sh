@@ -103,4 +103,4 @@ done
 [ "$READY" -eq 1 ] || die "wrangler dev not ready on port $PORT after 30s"
 
 # 4. The flow itself.
-bash "$E2E_DEV_SCRIPT" "http://127.0.0.1:$PORT"
+E2E_LOCAL_PERSIST="$PERSIST" bash "$E2E_DEV_SCRIPT" "http://127.0.0.1:$PORT"
