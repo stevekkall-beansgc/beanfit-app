@@ -2,8 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import worker from "../src/index.js";
-import { configureDevice } from "../src/browser/configurator.js";
-import { registerBrowser } from "../src/browser/register.js";
+import { configuratorSource } from "../src/browser/configurator.js";
+import { registerSource } from "../src/browser/register.js";
 import { html, json } from "../src/lib/http.js";
 import { dashboard, deviceDetail } from "../src/pages.js";
 
@@ -88,11 +88,11 @@ test("configurator device ID is escaped outside executable script source", async
 test("fixed browser behavior is routable from checked-in source modules", async () => {
   const env = { DB: {} };
   const cases = [
-    ["/assets/register.js", registerBrowser, 'document.getElementById("register-browser")'],
-    ["/assets/configurator.js", configureDevice, 'root.getAttribute("data-device-id")'],
+    ["/assets/register.js", registerSource, 'document.getElementById("register-browser")'],
+    ["/assets/configurator.js", configuratorSource, 'root.getAttribute("data-device-id")'],
   ];
 
-  for (const [path, sourceFunction, requiredText] of cases) {
+  for (const [path, expectedSource, requiredText] of cases) {
     const response = await worker.fetch(new Request(`https://app.example${path}`), env);
     const source = await response.text();
 
@@ -100,7 +100,7 @@ test("fixed browser behavior is routable from checked-in source modules", async 
     assert.equal(response.headers.get("content-type"), "application/javascript; charset=utf-8");
     assert.equal(response.headers.get("x-content-type-options"), "nosniff");
     assert.equal(response.headers.get("content-security-policy"), null);
-    assert.equal(source, `(${sourceFunction.toString()})();\n`);
+    assert.equal(source, expectedSource);
     assert.ok(source.includes(requiredText));
     assert.doesNotThrow(() => new Function(source));
   }

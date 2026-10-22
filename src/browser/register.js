@@ -1,4 +1,6 @@
-export function registerBrowser() {
+// Keep browser code as literal source: serializing a bundled function can
+// capture Worker-only helpers that are absent in the browser.
+export const registerSource = String.raw`(function registerBrowser() {
   function detectGPU() {
     try {
       var c = document.createElement("canvas");
@@ -48,4 +50,5 @@ export function registerBrowser() {
     navigator.clipboard.writeText("git clone https://github.com/stevekkall-beansgc/beanfit && cd beanfit && PYTHONPATH=src python3 -m beanfit register");
     copy.textContent = "copied";
   });
-}
+})();
+`;

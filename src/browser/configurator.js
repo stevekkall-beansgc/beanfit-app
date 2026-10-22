@@ -1,4 +1,6 @@
-export function configureDevice() {
+// Keep browser code as literal source: serializing a bundled function can
+// capture Worker-only helpers that are absent in the browser.
+export const configuratorSource = String.raw`(function configureDevice() {
   var root = document.getElementById("stack-config");
   var btn = document.getElementById("gen-stack");
   var deviceId = root ? root.getAttribute("data-device-id") : null;
@@ -32,4 +34,5 @@ export function configureDevice() {
     });
   });
   bindCopies();
-}
+})();
+`;
