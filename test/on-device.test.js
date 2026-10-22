@@ -18,7 +18,7 @@ const options = [
   { experience: "text_assistant", device: "iPhone15,3", os_major: 26, preference: "smallest_download" },
   { experience: "text_assistant", device: "unknown", os_major: 26 },
   { experience: "text_assistant", device: "iPhone15,3", os_major: 25 },
-  ...["image_description", "transcription", "speech_output"].map(experience => ({ experience, device: "iPhone15,3", os_major: 26 })),
+  ...["image_description", "transcription", "speech_output", "semantic_search", "decision_classification"].map(experience => ({ experience, device: "iPhone15,3", os_major: 26 })),
 ];
 
 test("on-device catalog and every suggestion match the CLI", {
@@ -48,6 +48,28 @@ test("unknown inputs and invalid budgets fail closed", () => {
   for (const input of [{experience:"<script>"}, {os_major:true}, {memory_budget_bytes:NaN},
     {memory_budget_bytes:0}, {memory_budget_bytes:true}, {context_tokens:2049}]) {
     assert.throws(() => suggestOnDevice(input));
+  }
+});
+
+test("voice notes and search retain integration gates and exclude Mac references", async () => {
+  assert.deepEqual(onDeviceCatalog.experiences.slice(0, 3).map(e => e.id),
+    ["text_assistant", "transcription", "semantic_search"]);
+  for (const [experience, first] of [["transcription", "fluid_speech_mini"], ["semantic_search", "embeddinggemma300"]]) {
+    const query = new URLSearchParams({ device: "iPhone15,3", ios: "26", experience });
+    const result = await modelSuggestions({ query, user: null }, true).json();
+    assert.equal(result.candidates[0].id, first);
+    assert.deepEqual(result.trial_order, []);
+    assert.equal(result.selection, null);
+    assert.ok(result.candidates.every(m => m.status === "requires_runtime_integration" && m.memory_fit === "unknown"));
+    const page = await modelSuggestions({ query, user: null }).text();
+    assert.match(page, /Start with text, voice notes and search/);
+    assert.match(page, /Needs additional app support/);
+    assert.match(page, /Mac comparison models/);
+  }
+  const references = new Set(onDeviceCatalog.reference_models.map(m => m.id));
+  for (const task of onDeviceCatalog.experiences) {
+    assert.ok(suggestOnDevice({ experience: task.id, device: "iPhone15,3", os_major: 26 })
+      .candidates.every(m => !references.has(m.id)));
   }
 });
 

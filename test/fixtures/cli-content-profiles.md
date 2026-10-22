@@ -3,7 +3,10 @@
 The immutable reusable gate checks out BeanFit v0.4.0, commit
 `a2f0b16d93d2b3db6316c3e10812686cd33a10f7`. The later locally qualified
 caller is `f988d4f3ce9e94fb7fdf1beb30d5c3af36589e85` (version 0.7.0).
-Each profile has its own full source SHA256 manifest and fixed expected
+The October 22 model-catalog caller is `6d6637861f2565dd3f4da1ceb745f896bd8f2534` (version 0.8.0).
+Its legacy desktop engine and stack generator are unchanged; its fixed expected
+content differs only in the independently pinned engine version. Each profile
+has its own full source SHA256 manifest and fixed expected
 hardware, sanitized eight-row snapshot, engine version, and complete stack.
 The original f988 fixtures remain byte-identical. These profiles describe
 synthetic detector execution only; they do not qualify physical detection,

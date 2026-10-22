@@ -25,6 +25,7 @@ export function suggestOnDevice({ experience = "text_assistant", device = "unkno
     else status = "needs_device_evidence";
     return { id: m.id, name: m.name, status, eligible_for_trial: status === "needs_device_evidence",
       download_bytes, memory_fit: "unknown", qualified: false, summary: m.summary,
+      license: m.license,
       source_url: m.source_url, artifacts: m.artifacts };
   });
   candidates.sort((a, b) => preference === "smallest_download"
