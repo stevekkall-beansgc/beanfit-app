@@ -151,7 +151,8 @@ The suggestions API contract is `v1` (`beanfit.on-device.suggestions.v1`).
 `GET /models` is a public server-rendered candidate browser; `GET
 /api/models/suggest` returns the same screening as JSON. Both accept
 `experience` (text_assistant, structured_extraction, shopping_filters,
-image_description, transcription, speech_output), an exact `device` identifier,
+image_description, transcription, speech_output, semantic_search,
+decision_classification), an exact `device` identifier,
 `ios` major version, optional positive whole-number `memory_budget_mib`, and
 `preference` (balanced or smallest_download). Example:
 
@@ -167,6 +168,17 @@ snapshot. Regenerate it with BeanFit's `scripts/sync_on_device_catalog.py
 tests compare catalog and complete suggestions against the Python implementation;
 set `BEANFIT_SRC=/path/to/beanfit/src` when the repositories are not siblings.
 Native snapshots are generated from the same source.
+
+The October 22 catalog puts text, voice notes and search first. Voice notes
+prioritize Fluid Speech Mini Core ML; semantic search starts with EmbeddingGemma
+300M Q8. Both remain blocked on native integration. d1 Omni adds decision
+classification, and Supertonic 3 adds a multilingual speech-output comparison.
+Collapsed Mac reference cards show Gemma 4 E2B, LFM2.5 24B-A2B MLX 4-bit and
+EmbeddingGemma 2 with exact sources; they never enter iPhone suggestions.
+License labels are model terms, not a promise of unrestricted use. Model sizes
+count only listed components; preprocessing, voice assets and indexes can add
+storage. The owned disposable HTTP E2E covers these discovery paths without
+running models or contacting providers.
 
 Suggestions are task-specific experiment ordering, not calibrated quality scores.
 Every row has `qualified: false` and `memory_fit: unknown`; `selection` remains

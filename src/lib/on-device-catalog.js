@@ -1,13 +1,13 @@
 // Generated from beanfit src/beanfit/catalog/on_device.json.
 export const ON_DEVICE_CATALOG = {
   "schema": "beanfit.on-device.catalog.v1",
-  "as_of": "2026-10-15",
+  "as_of": "2026-10-22",
   "runtime_revision": "2145525a4081d66ff1a87cf43ef809f95a85ac0c",
   "minimum_ios": 26,
   "native_context_tokens": 2048,
   "native_output_tokens": 256,
   "device_scope": "iPhone 14 and newer are evaluation targets, not qualified device families.",
-  "artifact_scope": "Pinned weight components only; download sizes and q8 sizes are not measured RAM. Supporting assets may be additional.",
+  "artifact_scope": "Pinned model components only; download sizes and q8 sizes are not measured RAM. Core ML entries count the listed compiled models, vocabulary, configuration and notices. Supporting assets and search indexes may be additional.",
   "runtime_route": "Direct pinned Hugging Face artifacts for the embedded runtime. Ollama tags and MLX alternatives are intentionally omitted; no guessed aliases.",
   "trial_order_basis": "Editorial experiment ordering by experience, not benchmark quality, memory-fit ranking or a production recommendation.",
   "experiences": [
@@ -22,7 +22,28 @@ export const ON_DEVICE_CATALOG = {
         "liquid350",
         "liquid230"
       ],
-      "fallback": "manual_editing"
+      "fallback": "manual_editing",
+      "summary": "Start with short summaries, rewriting and editable drafts. LFM2.5 1.2B is the first comparison candidate; task quality and sustained phone memory use still need testing."
+    },
+    {
+      "id": "transcription",
+      "name": "Voice notes and dictation",
+      "trial_order": [
+        "fluid_speech_mini",
+        "moonshine_tiny",
+        "moonshine_small"
+      ],
+      "fallback": "no_supported_runtime",
+      "summary": "Prepare offline English voice notes with Fluid Speech Mini first, with Moonshine as a comparison. Microphone and speech-runtime integration are still needed."
+    },
+    {
+      "id": "semantic_search",
+      "name": "Search saved notes and content",
+      "trial_order": [
+        "embeddinggemma300"
+      ],
+      "fallback": "keyword_search_or_manual_browsing",
+      "summary": "Prepare search across saved notes and content by meaning with EmbeddingGemma 300M. Embedding and local-index integration are still needed; keyword search remains the fallback."
     },
     {
       "id": "structured_extraction",
@@ -59,22 +80,22 @@ export const ON_DEVICE_CATALOG = {
       "fallback": "no_supported_runtime"
     },
     {
-      "id": "transcription",
-      "name": "Transcribe speech",
-      "trial_order": [
-        "moonshine_tiny",
-        "moonshine_small"
-      ],
-      "fallback": "no_supported_runtime"
-    },
-    {
       "id": "speech_output",
       "name": "Read text aloud",
       "trial_order": [
         "kitten_nano",
+        "supertonic3",
         "supertonic2"
       ],
       "fallback": "system_speech_if_available"
+    },
+    {
+      "id": "decision_classification",
+      "name": "Categories, choices and simple scores",
+      "trial_order": [
+        "d1_omni600"
+      ],
+      "fallback": "reviewed_manual_choices"
     }
   ],
   "models": [
@@ -423,6 +444,298 @@ export const ON_DEVICE_CATALOG = {
       "q8_artifact": null,
       "failed_experiences": [],
       "qualification": "unqualified"
+    },
+    {
+      "id": "fluid_speech_mini",
+      "name": "Fluid Speech Mini Core ML",
+      "capabilities": [
+        "transcription"
+      ],
+      "summary": "First voice-note integration candidate: English dictation using a published Core ML package. Requires microphone, audio processing and Swift app integration. Publisher Mac memory and speed results are not iPhone measurements.",
+      "runtime_status": "requires_integration",
+      "template": "",
+      "license": "cc-by-4.0",
+      "source_url": "https://huggingface.co/FluidVoice-Labs/fluid-speech-mini-coreml",
+      "artifacts": [
+        {
+          "repository": "FluidVoice-Labs/fluid-speech-mini-coreml",
+          "revision": "d81c3160dfe5a5e1f8f7267164a07d30617a3a1a",
+          "filename": "Decoder.mlmodelc/analytics/coremldata.bin",
+          "bytes": 243,
+          "sha256": "d4beee43a6eab29b2adcc298f2e8582e8fb79d5fe3aa9f1ab692ade681ca369d"
+        },
+        {
+          "repository": "FluidVoice-Labs/fluid-speech-mini-coreml",
+          "revision": "d81c3160dfe5a5e1f8f7267164a07d30617a3a1a",
+          "filename": "Decoder.mlmodelc/coremldata.bin",
+          "bytes": 491,
+          "sha256": "6094d06d05c1ca4599c7b13c9a4ca7c00826ee2396796cf3084ce602a9884468"
+        },
+        {
+          "repository": "FluidVoice-Labs/fluid-speech-mini-coreml",
+          "revision": "d81c3160dfe5a5e1f8f7267164a07d30617a3a1a",
+          "filename": "Decoder.mlmodelc/metadata.json",
+          "bytes": 3373,
+          "sha256": "13fcb358af8b028703dc7f424fd149ce9524642de510f3d682b75d471b1a001d"
+        },
+        {
+          "repository": "FluidVoice-Labs/fluid-speech-mini-coreml",
+          "revision": "d81c3160dfe5a5e1f8f7267164a07d30617a3a1a",
+          "filename": "Decoder.mlmodelc/model.mil",
+          "bytes": 13411,
+          "sha256": "4ccd8ecbc7eb59bed7ad38d471bf6b78ef52a24500bf64619c549ed45fbee4e9"
+        },
+        {
+          "repository": "FluidVoice-Labs/fluid-speech-mini-coreml",
+          "revision": "d81c3160dfe5a5e1f8f7267164a07d30617a3a1a",
+          "filename": "Decoder.mlmodelc/weights/weight.bin",
+          "bytes": 11845120,
+          "sha256": "d173e381488d07fd7648e2ccecbfb1bceff0457d75461550b26ba7fa2d23309a"
+        },
+        {
+          "repository": "FluidVoice-Labs/fluid-speech-mini-coreml",
+          "revision": "d81c3160dfe5a5e1f8f7267164a07d30617a3a1a",
+          "filename": "Encoder.mlmodelc/analytics/coremldata.bin",
+          "bytes": 243,
+          "sha256": "3a3caa2c6aec983d94a5659eff09a00f77077147ea6726b8ddfdf022f0238ce9"
+        },
+        {
+          "repository": "FluidVoice-Labs/fluid-speech-mini-coreml",
+          "revision": "d81c3160dfe5a5e1f8f7267164a07d30617a3a1a",
+          "filename": "Encoder.mlmodelc/coremldata.bin",
+          "bytes": 427,
+          "sha256": "494d8e2ce30b37bcdf494b3ba7ddf6e1bc921b9a59e369a9efd44d013ca3bf7d"
+        },
+        {
+          "repository": "FluidVoice-Labs/fluid-speech-mini-coreml",
+          "revision": "d81c3160dfe5a5e1f8f7267164a07d30617a3a1a",
+          "filename": "Encoder.mlmodelc/metadata.json",
+          "bytes": 2906,
+          "sha256": "1a2229e2cc4c271e4876715c9e36aef18bc7287e35690022c7f3939d85260ea9"
+        },
+        {
+          "repository": "FluidVoice-Labs/fluid-speech-mini-coreml",
+          "revision": "d81c3160dfe5a5e1f8f7267164a07d30617a3a1a",
+          "filename": "Encoder.mlmodelc/model.mil",
+          "bytes": 712643,
+          "sha256": "f96b7707936ea7ce5517c5b0f5c15cc634006bc58af1fe2587ac5979dd180343"
+        },
+        {
+          "repository": "FluidVoice-Labs/fluid-speech-mini-coreml",
+          "revision": "d81c3160dfe5a5e1f8f7267164a07d30617a3a1a",
+          "filename": "Encoder.mlmodelc/weights/weight.bin",
+          "bytes": 233096704,
+          "sha256": "cf0b61022de8c698984a8c7185c2d093fa744694621881ff062c46fee2546131"
+        },
+        {
+          "repository": "FluidVoice-Labs/fluid-speech-mini-coreml",
+          "revision": "d81c3160dfe5a5e1f8f7267164a07d30617a3a1a",
+          "filename": "JointDecision.mlmodelc/analytics/coremldata.bin",
+          "bytes": 243,
+          "sha256": "9e767d69e1092b27b28d9f236b9cbcded58ff3891e320cba7855e2c24e803d69"
+        },
+        {
+          "repository": "FluidVoice-Labs/fluid-speech-mini-coreml",
+          "revision": "d81c3160dfe5a5e1f8f7267164a07d30617a3a1a",
+          "filename": "JointDecision.mlmodelc/coremldata.bin",
+          "bytes": 462,
+          "sha256": "284b235c08cd4769202af017f854deace69c0209c29f2253a2073bb68d58d38d"
+        },
+        {
+          "repository": "FluidVoice-Labs/fluid-speech-mini-coreml",
+          "revision": "d81c3160dfe5a5e1f8f7267164a07d30617a3a1a",
+          "filename": "JointDecision.mlmodelc/metadata.json",
+          "bytes": 2790,
+          "sha256": "fe1ce083f9ff57524926a92fc264b0cf7d88f3ba9852f7acf9f59dcdf427e01f"
+        },
+        {
+          "repository": "FluidVoice-Labs/fluid-speech-mini-coreml",
+          "revision": "d81c3160dfe5a5e1f8f7267164a07d30617a3a1a",
+          "filename": "JointDecision.mlmodelc/model.mil",
+          "bytes": 7547,
+          "sha256": "1109ce72f6d014a6b99e49b41e83b3082d7555d74a6275838e7cbea42a6bd0ee"
+        },
+        {
+          "repository": "FluidVoice-Labs/fluid-speech-mini-coreml",
+          "revision": "d81c3160dfe5a5e1f8f7267164a07d30617a3a1a",
+          "filename": "JointDecision.mlmodelc/weights/weight.bin",
+          "bytes": 6350284,
+          "sha256": "f991f65979c1b3fee3db39a645aa87e6bef1a304ed1816d074b17479bea797fc"
+        },
+        {
+          "repository": "FluidVoice-Labs/fluid-speech-mini-coreml",
+          "revision": "d81c3160dfe5a5e1f8f7267164a07d30617a3a1a",
+          "filename": "Preprocessor.mlmodelc/analytics/coremldata.bin",
+          "bytes": 243,
+          "sha256": "c9beeb989c8d66f8be11df59bc6df277ec76cee404f6865b46243835ef562f6d"
+        },
+        {
+          "repository": "FluidVoice-Labs/fluid-speech-mini-coreml",
+          "revision": "d81c3160dfe5a5e1f8f7267164a07d30617a3a1a",
+          "filename": "Preprocessor.mlmodelc/coremldata.bin",
+          "bytes": 486,
+          "sha256": "dbde3f2300842c1fd51ef3ff948a0bcffe65ffd2dca10707f2509f32c1d65b1d"
+        },
+        {
+          "repository": "FluidVoice-Labs/fluid-speech-mini-coreml",
+          "revision": "d81c3160dfe5a5e1f8f7267164a07d30617a3a1a",
+          "filename": "Preprocessor.mlmodelc/metadata.json",
+          "bytes": 2841,
+          "sha256": "2a98699e22d279dd37fa1d238aeb1c6db1df0d6fad687775324157689d8f3acf"
+        },
+        {
+          "repository": "FluidVoice-Labs/fluid-speech-mini-coreml",
+          "revision": "d81c3160dfe5a5e1f8f7267164a07d30617a3a1a",
+          "filename": "Preprocessor.mlmodelc/model.mil",
+          "bytes": 28181,
+          "sha256": "4b8518a956450fec57f06c2a21bdffc26973f7f1fa6842fb38fe917f896b6b93"
+        },
+        {
+          "repository": "FluidVoice-Labs/fluid-speech-mini-coreml",
+          "revision": "d81c3160dfe5a5e1f8f7267164a07d30617a3a1a",
+          "filename": "Preprocessor.mlmodelc/weights/weight.bin",
+          "bytes": 491072,
+          "sha256": "129b76e3aeafa8afa3ea76d995b964b145fe83700d579f6ff42c4c38fa0968ea"
+        },
+        {
+          "repository": "FluidVoice-Labs/fluid-speech-mini-coreml",
+          "revision": "d81c3160dfe5a5e1f8f7267164a07d30617a3a1a",
+          "filename": "config.json",
+          "bytes": 314,
+          "sha256": "5e6e1189fd8e9da59633b929a977c716d696b84aff6ab9b040423bc8b9c8b3be"
+        },
+        {
+          "repository": "FluidVoice-Labs/fluid-speech-mini-coreml",
+          "revision": "d81c3160dfe5a5e1f8f7267164a07d30617a3a1a",
+          "filename": "parakeet_v3_vocab.json",
+          "bytes": 151122,
+          "sha256": "7ec60e05f1b24480736ec0eed40900f4626bce1fa9a60fd700ec7e2a59198735"
+        },
+        {
+          "repository": "FluidVoice-Labs/fluid-speech-mini-coreml",
+          "revision": "d81c3160dfe5a5e1f8f7267164a07d30617a3a1a",
+          "filename": "parakeet_vocab.json",
+          "bytes": 151122,
+          "sha256": "7ec60e05f1b24480736ec0eed40900f4626bce1fa9a60fd700ec7e2a59198735"
+        },
+        {
+          "repository": "FluidVoice-Labs/fluid-speech-mini-coreml",
+          "revision": "d81c3160dfe5a5e1f8f7267164a07d30617a3a1a",
+          "filename": "LICENSE",
+          "bytes": 18657,
+          "sha256": "9ba9550ad48438d0836ddab3da480b3b69ffa0aac7b7878b5a0039e7ab429411"
+        },
+        {
+          "repository": "FluidVoice-Labs/fluid-speech-mini-coreml",
+          "revision": "d81c3160dfe5a5e1f8f7267164a07d30617a3a1a",
+          "filename": "NOTICE",
+          "bytes": 690,
+          "sha256": "05119420d65cf41d7434a83027c23f1360740d7e8c25d6b47263698ffe1f4c86"
+        }
+      ],
+      "q8_artifact": null,
+      "failed_experiences": [],
+      "qualification": "unqualified"
+    },
+    {
+      "id": "embeddinggemma300",
+      "name": "EmbeddingGemma 300M Q8",
+      "capabilities": [
+        "semantic_search"
+      ],
+      "summary": "First search integration candidate: find saved notes and content by meaning. Requires embeddings, chunking and a local index; index storage and working memory are additional. Gemma terms apply.",
+      "runtime_status": "requires_integration",
+      "template": "",
+      "license": "gemma",
+      "source_url": "https://huggingface.co/google/embeddinggemma-300m",
+      "artifacts": [
+        {
+          "repository": "ggml-org/embeddinggemma-300M-GGUF",
+          "revision": "0f741b5a6585bd53aeb15cd1372c56f2a0f65e12",
+          "filename": "embeddinggemma-300M-Q8_0.gguf",
+          "bytes": 333590944,
+          "sha256": "b5ce9d77a3fc4b3b39ccb5643c36777911cc4eb46a66962eadfa3f5f60490d63"
+        }
+      ],
+      "q8_artifact": null,
+      "failed_experiences": [],
+      "qualification": "unqualified"
+    },
+    {
+      "id": "d1_omni600",
+      "name": "d1 Omni 600M Q8",
+      "capabilities": [
+        "decision_classification"
+      ],
+      "summary": "Early research candidate for named choices, yes/no answers and scores over text, an image or an audio clip. Both Q8 components are counted. Requires decision-head and media integration; this is not chat generation or transcription.",
+      "runtime_status": "requires_integration",
+      "template": "",
+      "license": "LFM Open License v1.0",
+      "source_url": "https://huggingface.co/LiquidAI/d1-omni-600M-GGUF",
+      "artifacts": [
+        {
+          "repository": "LiquidAI/d1-omni-600M-GGUF",
+          "revision": "8eb2d2a1c5404bba8a34a88bd8e159c242197d51",
+          "filename": "d1-omni-600M-Q8_0.gguf",
+          "bytes": 407207584,
+          "sha256": "cd94463f4cac9c700ec6750df8df005bb6846de410e159d1f5e985e1171693d3"
+        },
+        {
+          "repository": "LiquidAI/d1-omni-600M-GGUF",
+          "revision": "8eb2d2a1c5404bba8a34a88bd8e159c242197d51",
+          "filename": "mmproj-d1-omni-600M-Q8_0.gguf",
+          "bytes": 262791232,
+          "sha256": "df887978550cdbb45f0f57d7b436a0f844689f9f561395a144ced500606c3a89"
+        }
+      ],
+      "q8_artifact": null,
+      "failed_experiences": [],
+      "qualification": "unqualified"
+    },
+    {
+      "id": "supertonic3",
+      "name": "Supertonic 3",
+      "capabilities": [
+        "speech_output"
+      ],
+      "summary": "31-language speech-output comparison. Requires all four ONNX components, voice styles and text preprocessing. Larger download than Supertonic 2; quality and device fit need comparison.",
+      "runtime_status": "requires_integration",
+      "template": "",
+      "license": "openrail",
+      "source_url": "https://huggingface.co/Supertone/supertonic-3",
+      "artifacts": [
+        {
+          "repository": "Supertone/supertonic-3",
+          "revision": "3cadd1ee6394adea1bd021217a0e650ede09a323",
+          "filename": "onnx/duration_predictor.onnx",
+          "bytes": 3700147,
+          "sha256": "c3eb91414d5ff8a7a239b7fe9e34e7e2bf8a8140d8375ffb14718b1c639325db"
+        },
+        {
+          "repository": "Supertone/supertonic-3",
+          "revision": "3cadd1ee6394adea1bd021217a0e650ede09a323",
+          "filename": "onnx/text_encoder.onnx",
+          "bytes": 36416150,
+          "sha256": "c7befd5ea8c3119769e8a6c1486c4edc6a3bc8365c67621c881bbb774b9902ff"
+        },
+        {
+          "repository": "Supertone/supertonic-3",
+          "revision": "3cadd1ee6394adea1bd021217a0e650ede09a323",
+          "filename": "onnx/vector_estimator.onnx",
+          "bytes": 256534781,
+          "sha256": "883ac868ea0275ef0e991524dc64f16b3c0376efd7c320af6b53f5b780d7c61c"
+        },
+        {
+          "repository": "Supertone/supertonic-3",
+          "revision": "3cadd1ee6394adea1bd021217a0e650ede09a323",
+          "filename": "onnx/vocoder.onnx",
+          "bytes": 101424195,
+          "sha256": "085de76dd8e8d5836d6ca66826601f615939218f90e519f70ee8a36ed2a4c4ba"
+        }
+      ],
+      "q8_artifact": null,
+      "failed_experiences": [],
+      "qualification": "unqualified"
     }
   ],
   "devices": [
@@ -514,5 +827,106 @@ export const ON_DEVICE_CATALOG = {
   "device_source": {
     "url": "https://github.com/devicekit/DeviceKit/blob/4548e5a9f2410c04d3c06754b43b8891c7d86425/Source/Device.generated.swift",
     "scope": "Hardware identifier/name mapping only; no memory or performance qualification."
-  }
+  },
+  "reference_models": [
+    {
+      "id": "gemma4_e2b_reference",
+      "name": "Gemma 4 E2B QAT Q4_0",
+      "capabilities": [
+        "text_assistant",
+        "image_description",
+        "transcription"
+      ],
+      "summary": "Mac-first text, image and audio-understanding comparison. Both decoder and media components are counted; E2B is an effective parameter label, not a 2 GB package. No iPhone recommendation.",
+      "runtime_status": "requires_integration",
+      "template": "",
+      "license": "apache-2.0",
+      "source_url": "https://huggingface.co/google/gemma-4-E2B-it-qat-q4_0-gguf",
+      "artifacts": [
+        {
+          "repository": "google/gemma-4-E2B-it-qat-q4_0-gguf",
+          "revision": "675cff42a74c774d6cb76f76d8eacb49b48c9b93",
+          "filename": "gemma-4-E2B_q4_0-it.gguf",
+          "bytes": 3349516256,
+          "sha256": "fa401b55b07ee70a54c6dae3903c783a6e65064312529ea57175cb5f8dec6634"
+        },
+        {
+          "repository": "google/gemma-4-E2B-it-qat-q4_0-gguf",
+          "revision": "675cff42a74c774d6cb76f76d8eacb49b48c9b93",
+          "filename": "gemma-4-E2B-it-mmproj.gguf",
+          "bytes": 986833664,
+          "sha256": "021059cce659fe7f9170d5599761d7bbaf644b798dab9503aca30dc43e6beb14"
+        }
+      ],
+      "q8_artifact": null,
+      "failed_experiences": [],
+      "qualification": "unqualified",
+      "evaluation_scope": "mac_reference_only"
+    },
+    {
+      "id": "liquid24_reference",
+      "name": "LFM2.5 24B-A2B MLX 4-bit",
+      "capabilities": [
+        "text_assistant"
+      ],
+      "summary": "Larger text-quality reference for an Apple Silicon Mac. All three weight shards are required; 2B active parameters does not give a 2B download. Not an iPhone candidate.",
+      "runtime_status": "requires_integration",
+      "template": "",
+      "license": "LFM Open License v1.0",
+      "source_url": "https://huggingface.co/LiquidAI/LFM2.5-24B-A2B-MLX-4bit",
+      "artifacts": [
+        {
+          "repository": "LiquidAI/LFM2.5-24B-A2B-MLX-4bit",
+          "revision": "667408d494bde191c2cb9dd4f4549827816b9275",
+          "filename": "model-00001-of-00003.safetensors",
+          "bytes": 5318453801,
+          "sha256": "17e953456c62314a498f1ef5ee8a5f1b51ac83f6b6bb684f160dde4f92cd11c0"
+        },
+        {
+          "repository": "LiquidAI/LFM2.5-24B-A2B-MLX-4bit",
+          "revision": "667408d494bde191c2cb9dd4f4549827816b9275",
+          "filename": "model-00002-of-00003.safetensors",
+          "bytes": 5344895125,
+          "sha256": "c3ae09dba31b3786c325425435021cf5d5bf06c1a79acb31a741e15a47e5bb14"
+        },
+        {
+          "repository": "LiquidAI/LFM2.5-24B-A2B-MLX-4bit",
+          "revision": "667408d494bde191c2cb9dd4f4549827816b9275",
+          "filename": "model-00003-of-00003.safetensors",
+          "bytes": 2903945409,
+          "sha256": "9814144af5045ea8c96e2f1352148fdbe9f8a0085b76df6d6760efbe916e9840"
+        }
+      ],
+      "q8_artifact": null,
+      "failed_experiences": [],
+      "qualification": "unqualified",
+      "evaluation_scope": "mac_reference_only"
+    },
+    {
+      "id": "embeddinggemma2_reference",
+      "name": "EmbeddingGemma 2",
+      "capabilities": [
+        "semantic_search"
+      ],
+      "summary": "Mac-first multimodal search reference with text, image, audio and video embeddings. Full published weights are counted. Text-only selective loading is possible, but no phone export is verified.",
+      "runtime_status": "requires_integration",
+      "template": "",
+      "license": "apache-2.0",
+      "source_url": "https://huggingface.co/google/embeddinggemma-2",
+      "artifacts": [
+        {
+          "repository": "google/embeddinggemma-2",
+          "revision": "914f7f89142e33e77833254d9c9b90c3cef7303b",
+          "filename": "model.safetensors",
+          "bytes": 1488915288,
+          "sha256": "197a32965d4b1105faf060417baa899e193fb73cd401f42ec9295234d5553d79"
+        }
+      ],
+      "q8_artifact": null,
+      "failed_experiences": [],
+      "qualification": "unqualified",
+      "evaluation_scope": "mac_reference_only"
+    }
+  ],
+  "reference_scope": "Mac-first research comparisons only. Excluded from all iPhone candidate lists and runnable trial orders; no measured memory-fit or quality rating is assigned."
 };

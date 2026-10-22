@@ -33,14 +33,16 @@ export function modelSuggestions(ctx, api = false) {
   catch { return api ? json({ error: "Invalid model suggestion options" }, 400)
     : html(layout("Model suggestions", '<h1>Check the model options</h1><p>Choose a listed experience, a valid iOS version, and a positive whole-number memory allowance.</p><a href="/models">Start again</a>', ctx.user), 400); }
   if (api) return json(result);
+  const experience = onDeviceCatalog.experiences.find(e => e.id === opts.experience);
   const option = (value, name, current) => `<option value="${esc(value)}"${value === current ? " selected" : ""}>${esc(name)}</option>`;
   const modelRows = result.candidates.map(m => `<article class="card">
     <h2>${esc(m.name)}</h2><p><strong>${esc(LABELS[m.status])}</strong></p>
-    <p>${esc(m.summary)}</p><p>${esc((m.download_bytes / 1e6).toFixed(1))} MB of weight components. Working memory is unverified.</p>
-    <details><summary>Sources and exact files</summary><p><a href="${esc(m.source_url)}">Publisher/model information</a></p>
+    <p>${esc(m.summary)}</p><p>${esc((m.download_bytes / 1e6).toFixed(1))} MB of listed model components. Working memory is unverified.</p>
+    <details><summary>Sources and exact files</summary><p><a href="${esc(m.source_url)}">Publisher/model information</a> · License: ${esc(m.license)}</p>
     ${m.artifacts.map(a => `<p><a href="${esc(`https://huggingface.co/${a.repository}/blob/${a.revision}/${a.filename}`)}">${esc(a.filename)}</a><br><small>SHA-256: ${esc(a.sha256)}</small></p>`).join("")}</details></article>`).join("");
   const body = `<h1>Local AI for your iPhone</h1>
     <p>Choose an experience to explore current models. These are candidates to test; no configuration here is production-qualified.</p>
+    <p>Start with text, voice notes and search. Short text requests have an existing native runtime; voice notes and search need app integration before iPhone testing.</p>
     <form method="get" action="/models" class="card">
       <label>Experience <select name="experience">${onDeviceCatalog.experiences.map(e => option(e.id, e.name, opts.experience)).join("")}</select></label><br>
       <label>Phone <select name="device">${DEVICES.map(([id, name]) => option(id, name, opts.device)).join("")}</select></label>
@@ -51,9 +53,15 @@ export function modelSuggestions(ctx, api = false) {
       <p>Use an application memory allowance, not the phone’s total RAM. Files reaching it are conservatively excluded before testing. File size is not resident memory; all candidates need complete memory measurement.</p></details>
       <button type="submit">Show model candidates</button>
     </form>
-    <p>Catalog checked ${esc(result.catalog_as_of)}. The current native app supports short text requests. Vision and speech entries require further integration.</p>
+    <p>Catalog checked ${esc(result.catalog_as_of)}. The current native app supports short text requests. Search, decisions, vision and speech entries require further integration.</p>
+    ${experience.summary ? `<p class="card">${esc(experience.summary)}</p>` : ""}
     ${opts.experience === "shopping_filters" ? '<p class="card">Use reviewed manual filters or the bounded parser for shopping. Existing Liquid 350M and Qwen 0.8B configurations failed the frozen task tests.</p>' : ""}
     <p>Testable candidates: ${esc(result.trial_order.map(id => result.candidates.find(m => m.id === id).name).join(", ") || "none for these settings")}. Ordering is a starting point for comparison, not a measured quality ranking.</p>
-    ${modelRows}`;
+    ${modelRows}
+    <details><summary>Mac comparison models</summary><p>${esc(onDeviceCatalog.reference_scope)}</p>
+    ${onDeviceCatalog.reference_models.map(m => `<article class="card"><h2>${esc(m.name)}</h2>
+      <p>${esc(m.summary)}</p><p>${esc((m.artifacts.reduce((sum, a) => sum + a.bytes, 0) / 1e9).toFixed(2))} GB of listed components; working memory unverified.</p>
+      <p><a href="${esc(m.source_url)}">Model information</a> · License: ${esc(m.license)}</p>
+      ${m.artifacts.map(a => `<p><a href="${esc(`https://huggingface.co/${a.repository}/blob/${a.revision}/${a.filename}`)}">${esc(a.filename)}</a><br><small>SHA-256: ${esc(a.sha256)}</small></p>`).join("")}</article>`).join("")}</details>`;
   return html(layout("Local model candidates", body, ctx.user));
 }

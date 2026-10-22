@@ -37,6 +37,8 @@ are not new benchmarks.
 
 Open `/models` in the configured app to choose an experience, phone and iOS
 version. The page shows current pinned models and a task-specific trial order.
+Start with text, voice notes and search; voice notes and search are preparation
+candidates that still need native integration and iPhone testing.
 It does not run inference or claim measured memory fit. Known shopping failures
 stay excluded; vision, speech and reasoning configurations needing integration
 are identified. [Catalog synchronization and API](README-REFERENCE.md#on-device-model-candidates)
