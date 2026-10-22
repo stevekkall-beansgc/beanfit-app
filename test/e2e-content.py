@@ -25,8 +25,34 @@ import urllib.request
 
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURES = ROOT / "test/fixtures"
-EXPECTED = json.loads((FIXTURES / "cli-content-expected.json").read_text())
-CALLER = json.loads((FIXTURES / "cli-content-caller.json").read_text())
+# Explicit reviewed source/expectation pairs. Never select by a version string,
+# environment hint, partial manifest, or product-generated expected output.
+PROFILES = (
+    ("cli-content-caller.json", "cli-content-expected.json"),
+    ("cli-content-caller-v0.4.0.json", "cli-content-expected-v0.4.0.json"),
+)
+
+
+def select_profile(source):
+    package = source / "beanfit"
+    assert package.is_dir() and not package.is_symlink(), "caller package must be a directory"
+    actual = {}
+    for path in sorted(package.rglob("*")):
+        assert not path.is_symlink(), "caller source symlinks forbidden"
+        if path.is_dir() or "__pycache__" in path.relative_to(package).parts:
+            continue
+        assert path.is_file(), "caller source must contain regular files"
+        actual["src/" + path.relative_to(source).as_posix()] = hashlib.sha256(path.read_bytes()).hexdigest()
+    matches = []
+    for caller_file, expected_file in PROFILES:
+        caller = json.loads((FIXTURES / caller_file).read_text())
+        wanted = {entry["path"]: entry["sha256"] for entry in caller["files"]}
+        assert len(wanted) == len(caller["files"]), "duplicate caller manifest entry"
+        if actual == wanted:
+            matches.append((caller, expected_file))
+    assert len(matches) == 1, "unknown or mixed caller source: no exact reviewed profile"
+    caller, expected_file = matches[0]
+    return caller, json.loads((FIXTURES / expected_file).read_text())
 
 
 def require_equal(actual, expected, label):
@@ -57,11 +83,7 @@ def main():
     persist = Path(persist).resolve(strict=True)
     assert persist.name == "persist", "requires wrapper's disposable persistence directory"
     source = Path(os.environ["BEANFIT_SRC"]).resolve(strict=True)
-    for entry in CALLER["files"]:
-        path = Path(entry["path"])
-        assert path.parts[0] == "src" and ".." not in path.parts
-        actual = hashlib.sha256((source / Path(*path.parts[1:])).read_bytes()).hexdigest()
-        require_equal(actual, entry["sha256"], f"caller pin {path}")
+    CALLER, EXPECTED = select_profile(source)
     print(f"Content E2E caller pin verified: {CALLER['commit']} ({len(CALLER['files'])} files)")
     wrangler = str(Path(os.environ.get("WRANGLER_BIN", "node_modules/.bin/wrangler")).resolve(strict=True))
 
@@ -127,7 +149,9 @@ def main():
             "beanfit.hw.detect = synthetic_detect\n")
         env = dict(os.environ, HOME=str(work / "home"), APPDATA=str(work / "appdata"),
                    PYTHONPATH=os.pathsep.join([str(adapter), str(source)]),
-                   PYTHONNOUSERSITE="1", PYTHONDONTWRITEBYTECODE="1")
+                   PYTHONNOUSERSITE="1", PYTHONDONTWRITEBYTECODE="1",
+                   # Ignore any existing bytecode next to the reviewed sources.
+                   PYTHONPYCACHEPREFIX=str(work / "empty-pycache"))
         # Python prints sitecustomize failures and may continue startup: require
         # the exact adapter identity in both the guard and the actual CLI process.
         guard = ("import sys,beanfit.hw; from beanfit import register; "

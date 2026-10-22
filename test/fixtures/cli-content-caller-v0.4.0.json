@@ -1,0 +1,109 @@
+{
+  "commit": "a2f0b16d93d2b3db6316c3e10812686cd33a10f7",
+  "files": [
+    {
+      "path": "src/beanfit/__init__.py",
+      "sha256": "f70f298bb9966a3a5c055671513825785439086ee86d6a003f71a8ee2baedf87"
+    },
+    {
+      "path": "src/beanfit/__main__.py",
+      "sha256": "9d7b2870c8196bd35db5b0b3393517ed08f34d4e55441c8c7579131154f38c47"
+    },
+    {
+      "path": "src/beanfit/activation.py",
+      "sha256": "2f225c4101ac7e33a30f247539ec950b3298e6d14618786bacd9bb4178df69f2"
+    },
+    {
+      "path": "src/beanfit/apify_actor.py",
+      "sha256": "2f09ca77f53d5edaecc173d6333b548538f3cceeab8d8981b6bdb65ce50a3ec0"
+    },
+    {
+      "path": "src/beanfit/apify_fulfillment.py",
+      "sha256": "a08a3ddda1c3f6ebf944682657d37c9257d67b57924303d91d33626bd1168f03"
+    },
+    {
+      "path": "src/beanfit/catalog/__init__.py",
+      "sha256": "5622540201f062dab7de82057777cf01c077af813df429ddc481ec4ea2076a1b"
+    },
+    {
+      "path": "src/beanfit/catalog/models.py",
+      "sha256": "66e974804cee9802440c4ecaf6799f8b4e97e0defa8a50b753b5de23bc583b08"
+    },
+    {
+      "path": "src/beanfit/catalog/validate.py",
+      "sha256": "eb8cc3717b02422e4423563a7654f10279c682a364c002823a0f37ebadc19bc6"
+    },
+    {
+      "path": "src/beanfit/cli.py",
+      "sha256": "9276f23598ff285e4ed3e93e47d282baa3a7115cee722a444703143c2b5b34a6"
+    },
+    {
+      "path": "src/beanfit/emit/__init__.py",
+      "sha256": "f12f67d40245660db2d48743a45fcbfe23b5d6a7ef1ebe8fccab832ec0863a6f"
+    },
+    {
+      "path": "src/beanfit/emit/json_out.py",
+      "sha256": "789285fd34a4a166e31481fe0732db6f67bd0dc83e7b15785f6349821b40331c"
+    },
+    {
+      "path": "src/beanfit/emit/launch.py",
+      "sha256": "399413d5d26e3ff0cf97594a187aea805cfec78efbe4e87e85324c1bb30abe0b"
+    },
+    {
+      "path": "src/beanfit/emit/table.py",
+      "sha256": "2c1eece552b7463102179e47716769ab6c1e29fcce30bf6be4ed650af72dab85"
+    },
+    {
+      "path": "src/beanfit/engine/__init__.py",
+      "sha256": "bf6cde008a21161786d795da3b4f037a0557f318fbbfa20e168d2d0af106c739"
+    },
+    {
+      "path": "src/beanfit/engine/estimate.py",
+      "sha256": "ce4c17d145f52255d6f51510eac0d6a6c075dee8ad4e06686c958eca23bc720a"
+    },
+    {
+      "path": "src/beanfit/engine/evaluate.py",
+      "sha256": "ed8a67922794b942601cac681d69447da5821eb89e4419f21c57d2a1814b8741"
+    },
+    {
+      "path": "src/beanfit/hw/__init__.py",
+      "sha256": "354896f600e2adbf2f11a5ab57765245be8502a846d2ddd62f69e27f85fdf68e"
+    },
+    {
+      "path": "src/beanfit/hw/bandwidth.py",
+      "sha256": "47f28eb348f6ebe9497d58a754ecc1ad95d81298e6332bc1b6d21863b09230b5"
+    },
+    {
+      "path": "src/beanfit/hw/macos.py",
+      "sha256": "fa83422e8f93b99c49992acea3b7566038cb581ca449f0e18bf380434ab3da28"
+    },
+    {
+      "path": "src/beanfit/hw/util.py",
+      "sha256": "7b5d44bc06147233ae459305784c1bbb15fbc25436c7fbe1e80ef32c7a16e158"
+    },
+    {
+      "path": "src/beanfit/launch_readiness.py",
+      "sha256": "14b8461c87b4fcbbd09c973dc04a799fd86211b52a6f1776ffe3b0302adcebe6"
+    },
+    {
+      "path": "src/beanfit/profile.py",
+      "sha256": "cc2f1d70d1697cd7accb69318f9fb8ce59c362ea4b31ba51d5318f4920d35942"
+    },
+    {
+      "path": "src/beanfit/provider_evidence.py",
+      "sha256": "35ac8bd295b4baba21f457d94b09d50244cadee1bbc73fa4488168fd4600337f"
+    },
+    {
+      "path": "src/beanfit/register.py",
+      "sha256": "8970768d101ab78e5f2046ba3164ade6f39e0081d7ed04b41ea3ba7ac0a3d478"
+    },
+    {
+      "path": "src/beanfit/report.py",
+      "sha256": "2eba6e0e142cbae80d6fac1239b4f744334142ce3c68f22d7fe4643176d8c2a1"
+    },
+    {
+      "path": "src/beanfit/stripe_test.py",
+      "sha256": "f04b5ea53903f3bdba065ed8b6a47fab911063c248806e46482ffbc7549e1776"
+    }
+  ]
+}
