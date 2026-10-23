@@ -36,3 +36,17 @@ changed, mixed-profile, and symlinked source files refuse. Python-generated
 empty bytecode-cache prefix so existing bytecode cannot override reviewed
 source. Unknown versions require an explicitly reviewed new profile.
 No workflow, reusable gate, manifest, or caller revision pin is changed.
+
+## October 23 catalog release source
+
+`cli-content-caller-v0.8.1.json` binds the reviewed 30-file package for the focused
+catalog release. Compared with the released v0.8.0 package, only canonical catalog
+JSON and `__init__.py` source identity change. Hardware estimates, ranking,
+launch/stack templates and pairing payload generation remain byte-identical.
+
+`cli-content-expected-v0.8.1.json` copies the independently authored v0.8.0 content
+expectation and changes only `engine_version` from 0.8.0 to 0.8.1. All ranking,
+stack, hardware and payload values are preserved. Expected content is never
+produced from the product under test. Older released caller/expected fixtures
+remain byte-identical. The interim unshipped local catalog profile is superseded
+by this explicit release package rather than accepted as another fallback.

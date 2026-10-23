@@ -20,7 +20,7 @@ function options(ctx) {
 
 const LABELS = {
   needs_device_evidence: "Candidate for testing; memory fit unknown",
-  known_task_failure: "Failed existing shopping tests",
+  known_task_failure: "Earlier configuration failed tests for this experience",
   requires_runtime_integration: "Needs additional app support",
   unsupported_or_unknown_device: "Choose a phone in the evaluation list",
   unsupported_or_unknown_os: "Current Pocket runtime requires iOS 26+",

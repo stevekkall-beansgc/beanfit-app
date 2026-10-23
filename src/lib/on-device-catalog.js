@@ -1,7 +1,7 @@
 // Generated from beanfit src/beanfit/catalog/on_device.json.
 export const ON_DEVICE_CATALOG = {
   "schema": "beanfit.on-device.catalog.v1",
-  "as_of": "2026-10-22",
+  "as_of": "2026-10-23",
   "runtime_revision": "2145525a4081d66ff1a87cf43ef809f95a85ac0c",
   "minimum_ios": 26,
   "native_context_tokens": 2048,
@@ -9,21 +9,21 @@ export const ON_DEVICE_CATALOG = {
   "device_scope": "iPhone 14 and newer are evaluation targets, not qualified device families.",
   "artifact_scope": "Pinned model components only; download sizes and q8 sizes are not measured RAM. Core ML entries count the listed compiled models, vocabulary, configuration and notices. Supporting assets and search indexes may be additional.",
   "runtime_route": "Direct pinned Hugging Face artifacts for the embedded runtime. Ollama tags and MLX alternatives are intentionally omitted; no guessed aliases.",
-  "trial_order_basis": "Editorial experiment ordering by experience, not benchmark quality, memory-fit ranking or a production recommendation.",
+  "trial_order_basis": "Editorial trial order informed by available task evidence; not a measured memory-fit ranking or production qualification.",
   "experiences": [
     {
       "id": "text_assistant",
-      "name": "Chat, summaries and writing",
+      "name": "Short text summaries and writing",
       "trial_order": [
-        "liquid12",
         "qwen2",
-        "liquid26",
         "qwen08",
         "liquid350",
-        "liquid230"
+        "liquid230",
+        "liquid12",
+        "liquid26"
       ],
       "fallback": "manual_editing",
-      "summary": "Start with short summaries, rewriting and editable drafts. LFM2.5 1.2B is the first comparison candidate; task quality and sustained phone memory use still need testing."
+      "summary": "Start the next short-English summary/rewrite comparison with Qwen3.5 2B. Earlier LFM1.2B text configurations failed factual acceptance and remain held. Pocket has preliminary Qwen2 resource evidence; final phone quality and sustained heat checks remain pending. Reply drafts remain a separate unreleased native pilot, not a qualified model capability."
     },
     {
       "id": "transcription",
@@ -174,7 +174,7 @@ export const ON_DEVICE_CATALOG = {
         "structured_extraction",
         "shopping_filters"
       ],
-      "summary": "First general-text comparison candidate; device fit and task quality still need measurement.",
+      "summary": "Earlier short-text configuration failed factual acceptance on the test iPhone; held for this experience until a revised configuration passes review. Other tasks still need their own evidence.",
       "runtime_status": "native_text_candidate",
       "template": "lfm2",
       "license": "LFM Open License v1.0",
@@ -195,8 +195,11 @@ export const ON_DEVICE_CATALOG = {
         "bytes": 1246253888,
         "sha256": "f6b981dcb86917fa463f78a362320bd5e2dc45445df147287eedb85e5a30d26a"
       },
-      "failed_experiences": [],
-      "qualification": "unqualified"
+      "failed_experiences": [
+        "text_assistant"
+      ],
+      "qualification": "unqualified",
+      "failure_evidence_ref": "iphone/evidence/2026-10-22-acceptance/pocket-liquid12-initial-authored-review.json"
     },
     {
       "id": "liquid26",
@@ -273,7 +276,7 @@ export const ON_DEVICE_CATALOG = {
         "structured_extraction",
         "shopping_filters"
       ],
-      "summary": "Broader text-quality comparison. This artifact is text-only in Pocket; vision needs an additional component and integration.",
+      "summary": "Current summary/rewrite comparison candidate, not a qualified selection. Preliminary Pocket resource checks passed on iPhone 14 Pro Max; full quality, sustained heat and final-build lifecycle tests remain pending. Text-only runtime; vision needs additional integration.",
       "runtime_status": "native_text_candidate",
       "template": "qwen",
       "license": "apache-2.0",

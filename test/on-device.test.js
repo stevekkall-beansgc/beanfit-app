@@ -44,6 +44,19 @@ test("failed shopping models and unsupported runtimes never enter the trial orde
   assert.equal(vision.candidates[0].download_bytes, 332128736);
 });
 
+test("text ordering reflects the failed configuration without claiming phone qualification", async () => {
+  const result = suggestOnDevice(options[0]);
+  assert.equal(result.trial_order[0], "qwen2");
+  assert.ok(!result.trial_order.includes("liquid12"));
+  assert.equal(result.candidates.find(m => m.id === "liquid12").status, "known_task_failure");
+  assert.equal(result.selection, null);
+  assert.ok(result.candidates.every(m => !m.qualified && m.memory_fit === "unknown"));
+  const query = new URLSearchParams({ device: "iPhone15,3", ios: "26", experience: "text_assistant" });
+  const page = await modelSuggestions({ query, user: null }).text();
+  assert.match(page, /Earlier configuration failed tests for this experience/);
+  assert.match(page, /final phone quality and sustained heat checks remain pending/);
+});
+
 test("unknown inputs and invalid budgets fail closed", () => {
   for (const input of [{experience:"<script>"}, {os_major:true}, {memory_budget_bytes:NaN},
     {memory_budget_bytes:0}, {memory_budget_bytes:true}, {context_tokens:2049}]) {
@@ -82,7 +95,7 @@ test("public suggestions route exposes candidates without a fit guarantee", asyn
   assert.ok(!result.trial_order.includes("liquid350"));
   const page = await modelSuggestions({query,user:null}).text();
   assert.match(page, /no configuration here is production-qualified/);
-  assert.match(page, /Failed existing shopping tests/);
+  assert.match(page, /Earlier configuration failed tests for this experience/);
   assert.match(page, /LFM2.5 1.2B/);
   assert.doesNotMatch(page, /Runs great/);
   const bad = modelSuggestions({query:new URLSearchParams({device:'<img src=x onerror=alert(1)>'}),user:null});
