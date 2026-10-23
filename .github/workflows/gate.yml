@@ -2,8 +2,8 @@ name: gate
 on: [pull_request, push]
 jobs:
   compliance:
-    # Immutable gate-kit v0.4.18 (verified peeled commit c8cebc23bbce70ed66bbeb975872d66af8e3941b)
-    uses: stevekkall-beansgc/gate-kit/.github/workflows/compliance.yml@v0.4.18
+    # Immutable gate-kit v0.7.7 (verified peeled commit 46727184533ed30e061ddb574d1c32b247297081)
+    uses: stevekkall-beansgc/gate-kit/.github/workflows/compliance.yml@v0.7.7
     with:
       repo: beanfit-app
       full: true
