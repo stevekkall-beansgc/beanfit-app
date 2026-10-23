@@ -26,7 +26,7 @@ test("state rejects tampering, garbage, and expiry", async () => {
 });
 
 test("state drops unsafe redirect paths", async () => {
-  for (const evil of ["https://evil.example", "//evil.example", "javascript:alert(1)"]) {
+  for (const evil of ["https://evil.example", "//evil.example", "javascript:alert(1)", "/\\evil.example", "/\t/evil.example", "/\n/evil.example"]) {
     const { state } = await mintState(SECRET, evil);
     const out = await verifyState(SECRET, state);
     assert.equal(out.path, "");

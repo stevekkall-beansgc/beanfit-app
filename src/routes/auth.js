@@ -6,6 +6,7 @@ import {
 import { makeGoogleJwksVerifier } from "../lib/jwks.js";
 import { createStore } from "../lib/store.js";
 import { authForm, logoutConfirm, linkStatus } from "../pages.js";
+import { safeReturnPath as safeNext } from "../lib/return-path.js";
 
 // deps: { store, exchange, verifyGoogleToken, fetch } exist only so tests can
 // drive the decision tree without D1 or Google. Production callers
@@ -43,13 +44,7 @@ export function makeAuthHandlers(env, deps = {}) {
     await store.sessions.create(
       await sha256Hex(token), userId, nowUnix() + 60 * 60 * 24 * 30
     );
-    return redirect(next || "/dashboard", { "set-cookie": sessionCookie(token) });
-  }
-
-  // Only same-site absolute paths are safe redirect targets.
-  function safeNext(value) {
-    return typeof value === "string" && value.startsWith("/") && !value.startsWith("//")
-      ? value : "";
+    return redirect(safeNext(next) || "/dashboard", { "set-cookie": sessionCookie(token) });
   }
 
   function ssoConfigured() {
@@ -146,7 +141,7 @@ export function makeAuthHandlers(env, deps = {}) {
           return fail("That Google account is already linked to a different account.");
       }
     }
-    return redirect(state.path || "/dashboard");
+    return redirect(safeNext(state.path) || "/dashboard");
   }
 
   async function googleCallback(ctx) {

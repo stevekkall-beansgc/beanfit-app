@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { makeAuthHandlers } from "../src/routes/auth.js";
 import { mintState } from "../src/lib/oauth.js";
 import { makeGoogleJwksVerifier } from "../src/lib/jwks.js";
-import { randomHex, sha256Hex } from "../src/lib/crypto.js";
+import { randomHex, sha256Hex, hashPassword, hmacHex } from "../src/lib/crypto.js";
 import {
   makeSigningKey, signIdToken, tamperPayload, googleGoogleFetch,
 } from "./helpers/google-sigs.js";
@@ -26,6 +26,79 @@ const ENV = {
   GOOGLE_CLIENT_SECRET: "csec",
   DB: null,
 };
+
+const UNSAFE_RETURN_PATHS = [
+  "/\\outside.invalid", "/\t/outside.invalid", "/\n/outside.invalid",
+  "/\r/outside.invalid", "//outside.invalid", "https://outside.invalid/",
+  "/\u0000/outside.invalid", "/dashboard\u007f", "dashboard", "",
+];
+const SAFE_RETURN_PATHS = [
+  "/", "/devices/d1?tab=stack#details", "/pair/ABCD2345",
+  "/search?q=https%3A%2F%2Fexample.invalid", "/%2f%5cexample.invalid",
+  "/a/..//outside.invalid", "/.%2e//outside.invalid", "/dashboard?next=//outside.invalid",
+];
+
+test("password login and signup keep return locations on the app origin", async () => {
+  const store = memStore();
+  await store.users.create("return-user", "return@example.invalid", await hashPassword("test-password-123"));
+  const handlers = makeAuthHandlers(ENV, { store });
+  for (const [i, next] of [...UNSAFE_RETURN_PATHS, ...SAFE_RETURN_PATHS].entries()) {
+    const expected = SAFE_RETURN_PATHS.includes(next) ? next : "/dashboard";
+    for (const method of ["loginSubmit", "signupSubmit"]) {
+      const res = await handlers[method]({ form: {
+        email: method === "loginSubmit" ? "return@example.invalid" : `new-${i}@example.invalid`,
+        password: "test-password-123", next,
+      } });
+      assert.equal(res.status, 303);
+      assert.equal(res.headers.get("location"), expected, `${method}: ${JSON.stringify(next)}`);
+      assert.equal(new URL(res.headers.get("location"), "https://app.example").origin, "https://app.example");
+      assert.match(res.headers.get("set-cookie"), /bf_session=/);
+    }
+  }
+});
+
+test("auth pages and Google initiation discard unsafe return paths", async () => {
+  const handlers = makeAuthHandlers(ENV, { store: memStore() });
+  for (const next of UNSAFE_RETURN_PATHS.filter(Boolean)) {
+    const query = new URLSearchParams({ next });
+    const request = new Request(`https://app.example/login?${query}`);
+    for (const method of ["loginPage", "signupPage"]) {
+      const body = await (await handlers[method]({ request, query })).text();
+      assert.ok(!body.includes('name="next"'), `${method}: ${JSON.stringify(next)}`);
+    }
+    const res = await handlers.googleStart({ request, query });
+    const state = new URL(res.headers.get("location")).searchParams.get("state");
+    assert.equal(JSON.parse(Buffer.from(state.split(".")[0], "base64url").toString()).p, "");
+  }
+});
+
+test("Google callbacks revalidate signed return paths from before the fix", async () => {
+  for (const mode of ["known", "new", "race", "link"]) {
+    for (const next of ["/\\outside.invalid", "/\t/outside.invalid", "/devices/d1?tab=stack#details"]) {
+      const store = memStore();
+      await store.users.create("existing-user", "existing@example.invalid", "hash");
+      const token = mode === "link" ? await loginAs(store, "existing-user") : null;
+      let lookups = 0;
+      store.identities.find = async () => {
+        lookups += 1;
+        return mode === "known" || (mode === "race" && lookups > 1)
+          ? { user_id: "existing-user" } : null;
+      };
+      store._failCreate = mode === "race";
+      // Sign the legacy payload directly: patched mintState must not sanitize
+      // the fixture before it reaches the callback's trust boundary.
+      const doc = { n: "legacy-nonce", x: NOW + 600, p: next };
+      if (token) doc.l = { u: "existing-user", s: await sha256Hex(token) };
+      const payload = b64urlJson(doc);
+      const state = `${payload}.${await hmacHex(ENV.SESSION_SECRET, `state:${payload}`)}`;
+      const { handlers, ctx } = await callbackCtx(state, { store, sessionToken: token });
+      const res = await handlers.googleCallback(ctx);
+      assert.equal(res.status, 303, mode);
+      assert.equal(res.headers.get("location"), next.startsWith("/devices/") ? next : "/dashboard", mode);
+      assert.equal(new URL(res.headers.get("location"), "https://app.example").origin, "https://app.example");
+    }
+  }
+});
 
 function b64urlJson(obj) {
   return Buffer.from(JSON.stringify(obj)).toString("base64url");
