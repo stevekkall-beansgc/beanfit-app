@@ -17,7 +17,9 @@ Full `task validate` passes against that reviewed source package, including
 unit checks and the disposable local Worker/D1/CLI HTTP flow. The central QA
 runner's beanfit-app unit/E2E checks also pass. No production database, identity,
 retention schedule or cloud deployment changes. The dirty/primary product
-checkouts were preserved; this branch starts from origin/main 7e75466.
+checkouts were preserved; this branch started from origin/main 7e75466 and now
+incorporates updated main d360103 (Gate Kit PR #8). BeanFit similarly incorporates
+main 4754678; those CI-only changes do not alter the reviewed CLI package bytes.
 
 Publish the canonical BeanFit catalog and matching companion snapshot together
 through the normal exact-commit CI/release gates. The standalone catalog commit
