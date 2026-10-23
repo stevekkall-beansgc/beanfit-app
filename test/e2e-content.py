@@ -28,6 +28,7 @@ FIXTURES = ROOT / "test/fixtures"
 # Explicit reviewed source/expectation pairs. Never select by a version string,
 # environment hint, partial manifest, or product-generated expected output.
 PROFILES = (
+    ("cli-content-caller-text-2026-10-23.json", "cli-content-expected-v0.8.0.json"),
     ("cli-content-caller-v0.8.0.json", "cli-content-expected-v0.8.0.json"),
     ("cli-content-caller.json", "cli-content-expected.json"),
     ("cli-content-caller-v0.4.0.json", "cli-content-expected-v0.4.0.json"),

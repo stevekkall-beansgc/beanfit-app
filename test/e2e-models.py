@@ -24,14 +24,14 @@ def main():
 
     references = {"gemma4_e2b_reference", "liquid24_reference", "embeddinggemma2_reference"}
     for experience, first, size in (
-        ("text_assistant", "liquid12", 730895168),
+        ("text_assistant", "qwen2", 1280835840),
         ("transcription", "fluid_speech_mini", 252881615),
         ("semantic_search", "embeddinggemma300", 333590944),
         ("decision_classification", "d1_omni600", 669998816),
     ):
         query = urllib.parse.urlencode({"experience": experience, "device": "iPhone15,3", "ios": 26})
         result = json.loads(get("/api/models/suggest?" + query))
-        assert result["catalog_as_of"] == "2026-10-22"
+        assert result["catalog_as_of"] == "2026-10-23"
         assert result["selection"] is None
         assert result["candidates"][0]["id"] == first
         assert result["candidates"][0]["download_bytes"] == size
@@ -42,6 +42,8 @@ def main():
             assert all(row["status"] == "requires_runtime_integration" for row in result["candidates"])
         else:
             assert result["trial_order"][0] == first
+            assert "liquid12" not in result["trial_order"]
+            assert next(row for row in result["candidates"] if row["id"] == "liquid12")["status"] == "known_task_failure"
         page = get("/models?" + query)
         assert "Start with text, voice notes and search" in page
         assert "no configuration here is production-qualified" in page
