@@ -1,9 +1,9 @@
 {
-  "commit": "aab9540e0c083310e67fc49e3bad5bee2b305fa1",
+  "commit": "c47952b81e6b6013be78b7406510d74b0eebaddd",
   "files": [
     {
       "path": "src/beanfit/__init__.py",
-      "sha256": "bc42f3f62c62217fc74beac5f17fa35b664066f0994369701d86ddacaff7d983"
+      "sha256": "d32531bb72b8b287cf35189e450436bab50770757271d3c640e8a8426dee11db"
     },
     {
       "path": "src/beanfit/__main__.py",
@@ -31,7 +31,7 @@
     },
     {
       "path": "src/beanfit/catalog/on_device.json",
-      "sha256": "2875e34949923c26f847a77c45838d3113c41fb045bf480a6ef535d6f54b0582"
+      "sha256": "ee715fa25312bac93419c1feb596f251bdd58e8ad7fd5d6abd0ac06e7bb27f9f"
     },
     {
       "path": "src/beanfit/catalog/quality.py",

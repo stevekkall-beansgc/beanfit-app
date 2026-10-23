@@ -1,35 +1,36 @@
-# Text suggestions review — October 23
+# Model suggestions release review — October 23
 
-This local candidate puts Qwen3.5 2B first for short English text comparison and
-holds the LFM1.2B configuration that failed the earlier text acceptance. Neither
-memory allowance nor a caller-supplied passing receipt bypasses the held state.
-Every candidate remains unqualified, with unknown memory fit and no automatic
-selection. The public failure label applies to the selected experience.
+The owner authorized review, merge and deployment while physical phone
+qualification continues. The companion source advances to 0.6.2, paired with
+the focused BeanFit 0.8.1 catalog package rather than the full native pilot branch.
+Qwen3.5 2B is first for short English text comparison; failed LFM1.2B text remains
+held. Every candidate is unqualified, memory fit unknown and selection empty.
+A larger allowance or synthetic receipt cannot bypass the known-failure gate.
 
-The generated catalog is paired with BeanFit catalog commit
-`aab9540e0c083310e67fc49e3bad5bee2b305fa1`. The exact reviewed 30-file CLI package
-manifest is in `test/fixtures/cli-content-caller-text-2026-10-23.json`. Only the
-catalog JSON differs from the prior v0.8.0 caller profile. Existing independently
-authored v0.8.0 expected content and ranking/launch arithmetic are unchanged;
-the content E2E does not generate its own expected product result.
+The canonical update merged in BeanFit PR #6 at
+`c47952b81e6b6013be78b7406510d74b0eebaddd`. The generated catalog must match
+canonical JSON byte-for-byte after formatting.
+The exact 30-file CLI profile and independent content fixture are
+`cli-content-caller-v0.8.1.json` and `cli-content-expected-v0.8.1.json`. Compared
+with the released v0.8.0 caller, only catalog JSON and source identity change.
+The new content expectation changes only declared engine_version to 0.8.1;
+all hardware, ranking, stack and payload arithmetic remain unchanged. Historical
+released fixtures are retained. No product-generated expectation is used.
 
-Full `task validate` passes against that reviewed source package, including
-unit checks and the disposable local Worker/D1/CLI HTTP flow. The central QA
-runner's beanfit-app unit/E2E checks also pass. No production database, identity,
-retention schedule or cloud deployment changes. The dirty/primary product
-checkouts were preserved; this branch started from origin/main 7e75466 and now
-incorporates updated main d360103 (Gate Kit PR #8). BeanFit similarly incorporates
-main 4754678; those CI-only changes do not alter the reviewed CLI package bytes.
+Regression coverage includes held-configuration precedence, first comparison
+candidate, no automatic qualification, invalid inputs and readable labels.
+Full exact-source local Worker/D1/CLI HTTP acceptance and canonical QA are
+required before merge. No auth/identity, retention, scheduler, migration,
+production database catalog, or rate-limit change is included. On-device catalog
+data is embedded in the Worker; routine deployment needs no database sync.
 
-Publish the canonical BeanFit catalog and matching companion snapshot together
-through the normal exact-commit CI/release gates. The standalone catalog commit
-references acceptance evidence held on the larger native review branch; include
-that evidence when integrating it. Native quality/resource/heat qualification is
-still pending and these suggestions must retain that limitation after release.
-Voice notes and search remain deferred. No push, tag or deployment occurred.
+Historical phone failure/resource evidence accompanies the canonical catalog
+release. The summary identifies reply drafting as an unreleased native pilot.
+Final native quality, memory and sustained heat acceptance remains open, and
+voice/search stay deferred. No native generation code or app binary is deployed
+by this change. Dirty primary work and the full native branch are preserved.
 
-Implementer review with automated corroboration: the known-failure gate remains
-closed, independent expectations are preserved, and existing shopping failures
-remain held. This is not an independent review or proof of a best model across
-all workloads/devices. Readability review: 3/4; user-facing suggestions state the
-trial status and held reason without exposing testing implementation details.
+Implementer structural/corroborative/adversarial review, not independent sign-off.
+No blocking source finding remains. Readability: 3/4; public suggestions retain
+the trial status and held reason without promising a best model for all devices.
+Final release and deployment identities belong in their published notes/receipt.

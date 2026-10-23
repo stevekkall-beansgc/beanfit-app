@@ -23,7 +23,7 @@ export const ON_DEVICE_CATALOG = {
         "liquid26"
       ],
       "fallback": "manual_editing",
-      "summary": "Start the next short-English summary/rewrite comparison with Qwen3.5 2B. Earlier LFM1.2B text configurations failed factual acceptance and remain held. Pocket has preliminary Qwen2 resource evidence; final phone quality and sustained heat checks remain pending. Reply drafts use a separate local facts formatter, not AI generation."
+      "summary": "Start the next short-English summary/rewrite comparison with Qwen3.5 2B. Earlier LFM1.2B text configurations failed factual acceptance and remain held. Pocket has preliminary Qwen2 resource evidence; final phone quality and sustained heat checks remain pending. Reply drafts remain a separate unreleased native pilot, not a qualified model capability."
     },
     {
       "id": "transcription",
