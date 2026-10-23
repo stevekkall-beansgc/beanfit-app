@@ -329,3 +329,4 @@ if (!d.trial_order.includes("liquid12") || !d.candidates.every(c => c.memory_fit
 http_request "invalid on-device budget" "400" "$BASE/api/models/suggest?memory_budget_mib=0"
 echo 'On-device catalog and suggestion HTTP E2E PASS'
 python3 -B test/e2e-models.py "$BASE"
+python3 -B test/e2e-redirect.py "$BASE" "$EMAIL"

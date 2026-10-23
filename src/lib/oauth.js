@@ -6,6 +6,8 @@
 // Claims validation below (iss/aud/exp/nonce/sub/email_verified) runs on that
 // verified payload, and identity/session/link resolution happens after both.
 
+import { safeReturnPath } from "./return-path.js";
+
 const enc = new TextEncoder();
 
 function b64urlEncode(obj) {
@@ -36,7 +38,7 @@ export async function mintState(secret, next = "", ttlSecs = 600, link = null) {
   const doc = {
     n: nonce,
     x: Math.floor(Date.now() / 1000) + ttlSecs,
-    p: typeof next === "string" && next.startsWith("/") && !next.startsWith("//") ? next : "",
+    p: safeReturnPath(next),
   };
   if (link && typeof link === "object"
       && typeof link.uid === "string" && link.uid !== ""
