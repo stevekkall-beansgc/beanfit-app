@@ -197,3 +197,14 @@ against the current device memory budget before choosing an automatic default.
 If no model fits, it emits no installation commands. Explicit user overrides
 continue to carry their existing warnings. Estimated fit is not measured speed,
 quality or whole-product qualification.
+
+## Published Mac choices
+
+`/models?platform=mac` and `/api/models/suggest?platform=mac` render/export the
+canonical `mac_recommendations` document from BeanFit. The response schema is
+`beanfit.mac.recommendations.v1`; iPhone query options are rejected for this
+platform. The existing iPhone API schema and trial ordering are preserved.
+The shared catalog mirror includes dated evaluation provenance, runtime holds
+and immutable artifact identities. This is a public recommendation view, not a
+scan of installed models or a refresh of paired snapshots. Native phone heat
+findings remain visible on `/models`.

@@ -21,6 +21,33 @@ const options = [
   ...["image_description", "transcription", "speech_output", "semantic_search", "decision_classification"].map(experience => ({ experience, device: "iPhone15,3", os_major: 26 })),
 ];
 
+test("Mac choices show published evidence and preserve the runtime hold", async () => {
+  const ctx = { query: new URLSearchParams({ platform: "mac" }), user: null };
+  const result = await modelSuggestions(ctx, true).json();
+  assert.deepEqual(result, onDeviceCatalog.mac_recommendations);
+  assert.equal(result.schema, "beanfit.mac.recommendations.v1");
+  assert.equal(result.models.find(m => m.id === "lfm3_17b_mac").runtime_status, "awaiting_runtime_support");
+  const page = await modelSuggestions(ctx).text();
+  for (const text of ["Qwen3.8 27B", "LFM2.5 24B-A2B", "LFM3 1.7B", "Independent evaluation",
+    "Publisher evaluation", "Awaiting runtime support", "does not scan your Mac", "not loaded memory"]) {
+    assert.ok(page.includes(text), text);
+  }
+  assert.doesNotMatch(page, /Installed on your Mac|Runs great/);
+  const phone = await modelSuggestions({ query: new URLSearchParams(), user: null }).text();
+  assert.match(phone, /Native text release held/);
+  assert.match(phone, /exceeded the heat limit/);
+});
+
+test("Mac requests reject phone options and unknown platforms without reflecting input", async () => {
+  for (const query of ["platform=mac&ios=26", "platform=mac&device=iPhone15%2C3", "platform=mac&memory_budget_mib=999999", "platform=%3Cscript%3E"]) {
+    const ctx = { query: new URLSearchParams(query), user: null };
+    assert.equal(modelSuggestions(ctx, true).status, 400);
+    const response = modelSuggestions(ctx);
+    assert.equal(response.status, 400);
+    assert.doesNotMatch(await response.text(), /<script>/);
+  }
+});
+
 test("on-device catalog and every suggestion match the CLI", {
   skip: !fs.existsSync(path.join(src, "beanfit/on_device.py")) && "updated BeanFit source required",
 }, () => {

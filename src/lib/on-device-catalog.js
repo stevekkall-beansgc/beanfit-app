@@ -931,5 +931,207 @@ export const ON_DEVICE_CATALOG = {
       "evaluation_scope": "mac_reference_only"
     }
   ],
-  "reference_scope": "Mac-first research comparisons only. Excluded from all iPhone candidate lists and runnable trial orders; no measured memory-fit or quality rating is assigned."
+  "reference_scope": "Mac-first research comparisons only. Excluded from all iPhone candidate lists and runnable trial orders; no measured memory-fit or quality rating is assigned.",
+  "mac_recommendations": {
+    "schema": "beanfit.mac.recommendations.v1",
+    "as_of": "2026-10-28",
+    "selection_basis": "Published evaluations determine capability recommendations; no local model benchmark is required.",
+    "scope": "Apple Silicon Mac model choices by role. These are model recommendations, not an automatic device memory-fit decision.",
+    "limits": [
+      "Independent results are identified separately from publisher-reported evaluations.",
+      "Compare benchmark versions, reasoning modes and agent harnesses before comparing scores.",
+      "Artifact bytes describe weight files, not loaded memory. Context, runtime and concurrent workloads add memory.",
+      "This web catalog does not scan your Mac or know which models are installed.",
+      "The legacy eight-model Mac fit engine and previously paired recommendation snapshots are separate and are not refreshed by this page.",
+      "Mac recommendations do not remove the iPhone native release hold."
+    ],
+    "models": [
+      {
+        "id": "qwen38_27b_mac",
+        "name": "Qwen3.8 27B",
+        "role": "Primary Mac assistant",
+        "decision": "Keep as the primary choice for writing, reasoning, coding and image understanding.",
+        "runtime_status": "publisher_supported_mlx",
+        "format": "MLX 4-bit",
+        "license": "Apache-2.0",
+        "source_url": "https://huggingface.co/Qwen/Qwen3.8-27B",
+        "artifacts": [
+          {
+            "repository": "lmstudio-community/Qwen3.8-27B-MLX-4bit",
+            "revision": "6067b15cf581666a4aecf6af3afaba4bb5efc20c",
+            "filename": "model-00001-of-00003.safetensors",
+            "bytes": 5343268752,
+            "sha256": "471a9a81b54dddbfef43e8a71960ca24ad3c727891c6b0750a9db9a214aab504"
+          },
+          {
+            "repository": "lmstudio-community/Qwen3.8-27B-MLX-4bit",
+            "revision": "6067b15cf581666a4aecf6af3afaba4bb5efc20c",
+            "filename": "model-00002-of-00003.safetensors",
+            "bytes": 5354185100,
+            "sha256": "e7474b8f968f4078dfd4889925961c5b0da9939219b614dba08eb63c46590de7"
+          },
+          {
+            "repository": "lmstudio-community/Qwen3.8-27B-MLX-4bit",
+            "revision": "6067b15cf581666a4aecf6af3afaba4bb5efc20c",
+            "filename": "model-00003-of-00003.safetensors",
+            "bytes": 5357087747,
+            "sha256": "1038989bed1346ecdb541a45c078df2aae99a9509f35bfd51e7a04802a5d8402"
+          }
+        ],
+        "limitations": "Published evaluations cover the original model and their stated reasoning settings; the exact 4-bit conversion has no separate quality result here. Image input also requires a compatible vision runtime.",
+        "evidence": [
+          {
+            "kind": "publisher",
+            "url": "https://huggingface.co/Qwen/Qwen3.8-27B",
+            "summary": "Broad capability results support retaining this as the primary model; no universal win over every specialist is claimed.",
+            "benchmarks": [
+              "GPQA Diamond",
+              "IFBench",
+              "LiveCodeBench v6",
+              "SWE-bench Pro"
+            ],
+            "reviewed_on": "2026-10-28"
+          },
+          {
+            "kind": "independent",
+            "url": "https://artificialanalysis.ai/models/qwen3-8-27b",
+            "summary": "Independent evaluation of the xhigh reasoning mode supports broad capability. Hosted speed is not Mac throughput.",
+            "benchmarks": [
+              "Artificial Analysis Intelligence Index v5.0"
+            ],
+            "reviewed_on": "2026-10-28"
+          }
+        ]
+      },
+      {
+        "id": "lfm25_24b_mac",
+        "name": "LFM2.5 24B-A2B",
+        "role": "Fast agents and tool use",
+        "decision": "Add for workflows that call tools or retrieve information. Keep Qwen3.8 for broad knowledge tasks.",
+        "runtime_status": "publisher_supported_mlx",
+        "format": "MLX 4-bit",
+        "license": "LFM Open License v1.0",
+        "source_url": "https://huggingface.co/LiquidAI/LFM2.5-24B-A2B",
+        "artifacts": [
+          {
+            "repository": "LiquidAI/LFM2.5-24B-A2B-MLX-4bit",
+            "revision": "667408d494bde191c2cb9dd4f4549827816b9275",
+            "filename": "model-00001-of-00003.safetensors",
+            "bytes": 5318453801,
+            "sha256": "17e953456c62314a498f1ef5ee8a5f1b51ac83f6b6bb684f160dde4f92cd11c0"
+          },
+          {
+            "repository": "LiquidAI/LFM2.5-24B-A2B-MLX-4bit",
+            "revision": "667408d494bde191c2cb9dd4f4549827816b9275",
+            "filename": "model-00002-of-00003.safetensors",
+            "bytes": 5344895125,
+            "sha256": "c3ae09dba31b3786c325425435021cf5d5bf06c1a79acb31a741e15a47e5bb14"
+          },
+          {
+            "repository": "LiquidAI/LFM2.5-24B-A2B-MLX-4bit",
+            "revision": "667408d494bde191c2cb9dd4f4549827816b9275",
+            "filename": "model-00003-of-00003.safetensors",
+            "bytes": 2903945409,
+            "sha256": "9814144af5045ea8c96e2f1352148fdbe9f8a0085b76df6d6760efbe916e9840"
+          }
+        ],
+        "limitations": "Always generates reasoning before its answer. Publisher throughput of 184 tokens/s used llama.cpp Q4_K_M at a 4K-token context on an M5 Max; it is not an MLX or end-to-end latency result. The license has commercial conditions.",
+        "evidence": [
+          {
+            "kind": "publisher",
+            "url": "https://huggingface.co/LiquidAI/LFM2.5-24B-A2B",
+            "summary": "Publisher comparisons support this task-specific choice; it leads some tool-use tasks and trails competitors on others.",
+            "benchmarks": [
+              "AutomationBench",
+              "BFCLv4",
+              "ToolSandbox",
+              "LiveClaw",
+              "WebArena Verified"
+            ],
+            "reviewed_on": "2026-10-28"
+          }
+        ]
+      },
+      {
+        "id": "qwen3_4b_instruct_mac",
+        "name": "Qwen3 4B Instruct-2507",
+        "role": "Lightweight text available now",
+        "decision": "Retain as the smaller option for an existing MLX setup while LFM3 support matures.",
+        "runtime_status": "publisher_supported_mlx",
+        "format": "MLX 4-bit",
+        "license": "Apache-2.0",
+        "source_url": "https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507",
+        "artifacts": [
+          {
+            "repository": "mlx-community/Qwen3-4B-Instruct-2507-4bit",
+            "revision": "50d427756c6b1b2fe0c0a10f67fbda1fc8e82c1b",
+            "filename": "model.safetensors",
+            "bytes": 2263022417,
+            "sha256": "2a73c6c248601ab904e035548abd8e6abb65ea27dcb5f342fb0a8910eb44173f"
+          }
+        ],
+        "limitations": "A practical continuity choice, not a claim that it wins current compact-model benchmarks. Weight size does not establish latency or memory fit.",
+        "evidence": [
+          {
+            "kind": "publisher",
+            "url": "https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507",
+            "summary": "Publisher reports instruction-following, knowledge and coding evaluations for this instruction-tuned model.",
+            "benchmarks": [
+              "IFEval",
+              "MMLU-Pro",
+              "LiveCodeBench v6"
+            ],
+            "reviewed_on": "2026-10-28"
+          }
+        ]
+      },
+      {
+        "id": "lfm3_17b_mac",
+        "name": "LFM3 1.7B",
+        "role": "Compact structured tasks \u2014 awaiting runtime support",
+        "decision": "Preferred compact addition for structured outputs and tool use once the selected runtime supports it.",
+        "runtime_status": "awaiting_runtime_support",
+        "format": "MLX 4-bit (support in progress)",
+        "license": "LFM Open License v1.0",
+        "source_url": "https://huggingface.co/LiquidAI/LFM3-1.7B",
+        "artifacts": [
+          {
+            "repository": "LiquidAI/LFM3-1.7B-MLX-4bit",
+            "revision": "d0ca73dcfa70ce18733754a492cdc1fb0123262d",
+            "filename": "model.safetensors",
+            "bytes": 973083386,
+            "sha256": "1be5bf672013cd91aa62148f77c5eea8d2784a95845d5fe826e08c7b84823815"
+          }
+        ],
+        "limitations": "The publisher says MLX support is still in progress. GGUF requires an LFM3-compatible llama.cpp build. It is not recommended for agentic coding or complex multi-step reasoning. Its iPhone 17 Pro results do not qualify an iPhone 14 Pro Max.",
+        "evidence": [
+          {
+            "kind": "publisher",
+            "url": "https://huggingface.co/LiquidAI/LFM3-1.7B",
+            "summary": "Publisher results on public benchmarks support a compact structured-task role; independent corroboration was not established in this review.",
+            "benchmarks": [
+              "BFCL V4",
+              "ToolSandbox",
+              "Multi-IF",
+              "IFEval"
+            ],
+            "reviewed_on": "2026-10-28"
+          },
+          {
+            "kind": "runtime_status",
+            "url": "https://huggingface.co/LiquidAI/LFM3-1.7B-MLX-4bit",
+            "summary": "The model card explicitly marks MLX support as in progress.",
+            "benchmarks": [],
+            "reviewed_on": "2026-10-28"
+          }
+        ]
+      }
+    ]
+  },
+  "native_release_hold": {
+    "status": "held",
+    "as_of": "2026-10-25",
+    "summary": "Native text distribution is held: the CPU-only Qwen3.5 2B runtime exceeded the heat limit on the iPhone 14 Pro Max. Mac recommendations do not establish phone readiness.",
+    "evidence_url": "https://github.com/stevekkall-beansgc/beanfit/blob/ec0c82958e45e87b80d357179ba7081538242783/iphone/evidence/2026-10-25-phone/README.md"
+  }
 };
