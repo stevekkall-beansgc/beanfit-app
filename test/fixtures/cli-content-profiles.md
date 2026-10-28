@@ -50,3 +50,13 @@ stack, hardware and payload values are preserved. Expected content is never
 produced from the product under test. Older released caller/expected fixtures
 remain byte-identical. The interim unshipped local catalog profile is superseded
 by this explicit release package rather than accepted as another fallback.
+
+## October 28 published Mac choices
+
+The v0.9.0 caller pins commit `09213c5f0c829b717de7e76b1e2b211e36349fe9` with the complete 30-file
+package manifest. Changes are source identity, catalog metadata, Mac suggestion
+dispatch, and explanatory comments. The legacy fit engine, quality scores,
+hardware detector, pairing generator and stack templates are unchanged. The
+independently authored expectation changes only `engine_version` from 0.8.1 to
+0.9.0. Existing profiles remain unchanged. New Mac route checks compare its
+metadata and holds with this canonical catalog; no model inference is run.

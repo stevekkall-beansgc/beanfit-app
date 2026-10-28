@@ -33,13 +33,25 @@ record to your account. Codes expire after 15 minutes and device credentials
 are revocable. Fit estimates run locally and inherit BeanFit's limits; they
 are not new benchmarks.
 
+## Mac choices from published evaluations
+
+Open `/models?platform=mac` for role-based Mac choices with publisher and
+independent evaluation sources. The page recommends Qwen3.8 27B for general
+work and LFM2.5 24B-A2B for tool-based agents, retains Qwen3 4B Instruct as an
+available lightweight choice, and labels LFM3 1.7B as awaiting runtime support.
+No local model benchmark is required. Listed weight sizes do not establish
+loaded memory, and the page does not scan the visitor's Mac. The legacy fit
+engine and previously paired recommendation snapshots are unchanged.
+
 ## Current iPhone model candidates
 
 Open `/models` in the configured app to choose an experience, phone and iOS
 version. The page shows current pinned models and a task-specific trial order.
 Start with text, voice notes and search; voice notes and search are preparation
 candidates that still need native integration and iPhone testing.
-It does not run inference or claim measured memory fit. Known shopping failures
+The page records the native text release hold following CPU-only Qwen3.5 2B
+heat failures on the iPhone 14 Pro Max. It does not run inference or claim
+measured memory fit. Known shopping failures
 stay excluded; vision, speech and reasoning configurations needing integration
 are identified. [Catalog synchronization and API](README-REFERENCE.md#on-device-model-candidates)
 explain the shared BeanFit source.

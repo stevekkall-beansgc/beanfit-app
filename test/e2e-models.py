@@ -52,6 +52,14 @@ def main():
         assert "SHA-256:" in page
     shopping = json.loads(get("/api/models/suggest?device=iPhone15%2C3&ios=26&experience=shopping_filters"))
     assert {"liquid350", "qwen08"}.isdisjoint(shopping["trial_order"])
+    mac = json.loads(get("/api/models/suggest?platform=mac"))
+    assert mac["schema"] == "beanfit.mac.recommendations.v1"
+    assert mac["as_of"] == "2026-10-28"
+    assert next(m for m in mac["models"] if m["id"] == "lfm3_17b_mac")["runtime_status"] == "awaiting_runtime_support"
+    page = get("/models?platform=mac")
+    assert "Independent evaluation" in page and "Publisher evaluation" in page
+    assert "Awaiting runtime support" in page and "does not scan your Mac" in page
+    assert "Native text release held" in get("/models")
     print("Model discovery HTTP E2E passed: text, voice notes, search, decisions and qualification gates")
 
 

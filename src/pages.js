@@ -65,6 +65,7 @@ export function layout(title, content, user = null) {
 <header class="site"><div class="inner">
   <a href="/">beanfit</a>
   <nav>
+    <a href="/models?platform=mac">Mac model choices</a>
     <a href="/models">iPhone model candidates</a>
     ${user
       ? `<span class="muted" style="color:#aab">${esc(user.email)}</span><a href="/logout">Sign out</a>`
