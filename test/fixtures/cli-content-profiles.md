@@ -53,7 +53,7 @@ by this explicit release package rather than accepted as another fallback.
 
 ## October 28 published Mac choices
 
-The v0.9.0 caller pins commit `d2a84b79e5e92cf82ec6087173e4276b350c1342` with the complete 30-file
+The v0.9.0 caller pins commit `09213c5f0c829b717de7e76b1e2b211e36349fe9` with the complete 30-file
 package manifest. Changes are source identity, catalog metadata, Mac suggestion
 dispatch, and explanatory comments. The legacy fit engine, quality scores,
 hardware detector, pairing generator and stack templates are unchanged. The
